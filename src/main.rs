@@ -36,11 +36,11 @@ fn main() {
 //    // Now, school is a vector of vectors of Student objects
 //    println!("{:?}", school);
 //    println!("{:?}", student1);
-      let bottle1= Bottle::new([ 'A', 'A', ' ', ' ']);
-      let bottle2= Bottle::new([ 'B', 'B', 'A', ' ']);
+      let mut bottle1= Bottle::new([ 'A', 'A', ' ', ' ']);
+      let mut bottle2= Bottle::new([ 'B', 'B', 'A', ' ']);
       println!("{:?}", bottle1);
       println!("{:?}", bottle2);
-      let (newBottle1, newBottle2)= bottle1.fillFrom(bottle2).unwrap();
-      println!("{:?}", newBottle1);
-      println!("{:?}", newBottle2);
+      bottle1.fillFrom(&mut bottle2);
+      println!("{:?}", bottle1);
+      println!("{:?}", bottle2);
 }

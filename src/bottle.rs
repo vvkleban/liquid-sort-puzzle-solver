@@ -26,25 +26,19 @@ impl Bottle {
         i
     }
 
-    // If our bottle is fillable with the contents of the other, return the indices of where to
-    // start
-//    fn getTransferIndices(self, other: Bottle) -> Option<(usize, usize)> {
-//    }
-
-    pub fn fillFrom(self, other: Bottle) -> Option<(Bottle, Bottle)> {
+    pub fn fillFrom(&mut self, other: &mut Bottle) -> bool {
         let mut otherTopIndex: isize= other.getTopIndex() as isize;
         if other.content[otherTopIndex as usize] == ' ' {
-            return None;
+            return false;
         }
         let mut ourTopIndex= self.getTopIndex();
-        let mut mutated= None;
+        let mut mutated= false;
         let ourTopColor= if self.content[0] == ' ' {
-            mutated= Some((self.clone(), other.clone()));
-            let (ref mut myCopy, ref mut otherCopy)= mutated.as_mut().unwrap();
-            myCopy.content[0]= otherCopy.content[otherTopIndex as usize];
-            otherCopy.content[otherTopIndex as usize]= ' ';
+            self.content[0]= other.content[otherTopIndex as usize];
+            other.content[otherTopIndex as usize]= ' ';
             otherTopIndex-= 1;
-            myCopy.content[0]
+            mutated= true;
+            self.content[0]
         } else { 
             self.content[ourTopIndex] 
         };
@@ -52,14 +46,11 @@ impl Bottle {
             && otherTopIndex >= 0
             && other.content[otherTopIndex as usize] == ourTopColor
         {
-            if mutated == None {
-                mutated= Some((self.clone(), other.clone()));
-            } 
-            let (ref mut myCopy, ref mut otherCopy)= mutated.as_mut().unwrap();
             ourTopIndex+= 1;
-            myCopy.content[ourTopIndex]= otherCopy.content[otherTopIndex as usize];
-            otherCopy.content[otherTopIndex as usize]= ' ';
+            self.content[ourTopIndex]= other.content[otherTopIndex as usize];
+            other.content[otherTopIndex as usize]= ' ';
             otherTopIndex-= 1;
+            mutated= true;
         }
         mutated
     }
@@ -72,51 +63,61 @@ mod tests {
 
     #[test]
     fn fillCopySingleColor() {
-        let bottle1= Bottle::new([ 'A', 'A', ' ', ' ']);
-        let bottle2= Bottle::new([ 'B', 'B', 'A', ' ']);
+        let mut bottle1= Bottle::new([ 'A', 'A', ' ', ' ']);
+        let mut bottle2= Bottle::new([ 'B', 'B', 'A', ' ']);
         let bottle3= Bottle::new([ 'A', 'A', 'A', ' ']);
         let bottle4= Bottle::new([ 'B', 'B', ' ', ' ']);
-        let mutated= bottle1.fillFrom(bottle2);
-        assert!(mutated != None);
-        let (newBottle1, newBottle2)= mutated.unwrap();
-        assert_eq!(newBottle1, bottle3);
-        assert_eq!(newBottle2, bottle4);
+        let mutated= bottle1.fillFrom(&mut bottle2);
+        assert!(mutated == true);
+        assert_eq!(bottle1, bottle3);
+        assert_eq!(bottle2, bottle4);
     }
 
     #[test]
     fn fillOtherEmpty() {
-        let bottle1= Bottle::new([ 'A', 'A', ' ', ' ']);
-        let bottle2= Bottle::new([ ' ', ' ', ' ', ' ']);
-        let mutated= bottle1.fillFrom(bottle2);
-        assert!(mutated == None);
+        let mut bottle1= Bottle::new([ 'A', 'A', ' ', ' ']);
+        let mut bottle2= Bottle::new([ ' ', ' ', ' ', ' ']);
+        let bottle3= Bottle::new([ 'A', 'A', ' ', ' ']);
+        let bottle4= Bottle::new([ ' ', ' ', ' ', ' ']);
+        let mutated= bottle1.fillFrom(&mut bottle2);
+        assert!(mutated == false);
+        assert_eq!(bottle1, bottle3);
+        assert_eq!(bottle2, bottle4);
     }
 
     #[test]
     fn fillIncompatibleColors() {
-        let bottle1= Bottle::new([ 'A', 'A', ' ', ' ']);
-        let bottle2= Bottle::new([ 'B', 'B', ' ', ' ']);
-        let mutated= bottle1.fillFrom(bottle2);
-        assert!(mutated == None);
+        let mut bottle1= Bottle::new([ 'A', 'A', ' ', ' ']);
+        let mut bottle2= Bottle::new([ 'B', 'B', ' ', ' ']);
+        let bottle3= Bottle::new([ 'A', 'A', ' ', ' ']);
+        let bottle4= Bottle::new([ 'B', 'B', ' ', ' ']);
+        let mutated= bottle1.fillFrom(&mut bottle2);
+        assert!(mutated == false);
+        assert_eq!(bottle1, bottle3);
+        assert_eq!(bottle2, bottle4);
     }
 
     #[test]
     fn fillEmptyDestination() {
-        let bottle1= Bottle::new([ ' ', ' ', ' ', ' ']);
-        let bottle2= Bottle::new([ 'B', 'B', ' ', ' ']);
+        let mut bottle1= Bottle::new([ ' ', ' ', ' ', ' ']);
+        let mut bottle2= Bottle::new([ 'B', 'B', ' ', ' ']);
         let bottle3= Bottle::new([ 'B', 'B', ' ', ' ']);
         let bottle4= Bottle::new([ ' ', ' ', ' ', ' ']);
-        let mutated= bottle1.fillFrom(bottle2);
-        assert!(mutated != None);
-        let (newBottle1, newBottle2)= mutated.unwrap();
-        assert_eq!(newBottle1, bottle3);
-        assert_eq!(newBottle2, bottle4);
+        let mutated= bottle1.fillFrom(&mut bottle2);
+        assert!(mutated == true);
+        assert_eq!(bottle1, bottle3);
+        assert_eq!(bottle2, bottle4);
     }
 
     #[test]
     fn fillAlreadyFull() {
-        let bottle1= Bottle::new([ 'A', 'A', 'B', 'B']);
-        let bottle2= Bottle::new([ 'B', 'B', ' ', ' ']);
-        let mutated= bottle1.fillFrom(bottle2);
-        assert!(mutated == None);
+        let mut bottle1= Bottle::new([ 'A', 'A', 'B', 'B']);
+        let mut bottle2= Bottle::new([ 'B', 'B', ' ', ' ']);
+        let bottle3= Bottle::new([ 'A', 'A', 'B', 'B']);
+        let bottle4= Bottle::new([ 'B', 'B', ' ', ' ']);
+        let mutated= bottle1.fillFrom(&mut bottle2);
+        assert!(mutated == false);
+        assert_eq!(bottle1, bottle3);
+        assert_eq!(bottle2, bottle4);
     }
 }

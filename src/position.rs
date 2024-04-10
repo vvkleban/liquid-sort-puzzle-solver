@@ -23,16 +23,29 @@ impl Position {
         self.bottles.iter().all(|bottle| bottle.isSolved())
     }
 
-    pub fn generateNew(&self, myIndex: usize) -> Vec<Bottle> {
-        for i in 0..self.bottles.len() {
-            for j in 0..self.bottles.len() {
-                if i != j {
-                    if let Some(copy1, copy2) =self.bottles[i].fillFrom(bottles[j]
-                    {
+    pub fn getNextPossiblePositions(&self, myIndex: usize) -> Vec<Position> {
+        let mut result: Vec<Position>= Vec::new();
+        let mut newBottles= self.bottles.clone();
+        let bottleNum= self.bottles.len();
+        for i in 0..bottleNum {
+            for j in 0..bottleNum {
+                if i < j {
+                    let (left, right) = newBottles.split_at_mut(j);
+                    if left[i].fillFrom(&mut right[0]) {
+                        result.push(Position::new(newBottles, myIndex));
+                        newBottles= self.bottles.clone();
+                    }
+                }
+                else if i > j {
+                    let (left, right) = newBottles.split_at_mut(i);
+                    if right[0].fillFrom(&mut left[j]) {
+                        result.push(Position::new(newBottles, myIndex));
+                        newBottles= self.bottles.clone();
                     }
                 }
             }
         }
+        result
     }
 }
 
@@ -48,5 +61,26 @@ impl Hash for Position {
     fn hash<H: Hasher>(&self, state: &mut H) {
         // Hash of our identity is all that matters
         self.identity.hash(state);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn checkNextPositions() {
+        let bottle1= Bottle::new([ 'A', 'A', ' ', ' ']);
+        let bottle2= Bottle::new([ 'B', 'B', 'A', ' ']);
+        let bottle3= Bottle::new([ 'A', 'A', 'A', ' ']);
+        let bottle4= Bottle::new([ 'B', 'B', ' ', ' ']);
+        let bottle5= Bottle::new([ 'B', 'B', 'B', ' ']);
+        let pos1= Position::new(vec![bottle1, bottle2, bottle3, bottle4, bottle5], 0);
+        let newPositions= pos1.getNextPossiblePositions(0);
+        assert_eq!(newPositions.len(), 8);
+        for pos in &newPositions {
+            println!("{:?}", pos);
+        }
     }
 }
