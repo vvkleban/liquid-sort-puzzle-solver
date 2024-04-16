@@ -1,11 +1,14 @@
+use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
+use std::fmt::Write;
+use std::fmt;
 use crate::bottle::*;
 
 #[derive(Debug, Clone)]
 pub struct Position {
     bottles: Vec<Bottle>,
-    previous: usize,
-    identity: Vec<char>
+    pub previous: usize,
+    pub identity: Vec<char>
 }
 
 impl Position {
@@ -21,6 +24,30 @@ impl Position {
 
     pub fn isSolved(&self) -> bool {
         self.bottles.iter().all(|bottle| bottle.isSolved())
+    }
+
+    pub fn isValid(&self) -> Result<(), String> {
+        let mut char_count = HashMap::new();
+        // Iterate over each array and then each character in the array
+        for bottle in &self.bottles {
+            for &ch in bottle.content.iter() {
+                if ch != ' ' {
+                    *char_count.entry(ch).or_insert(0) += 1;
+                }
+            }
+        }
+
+        if char_count.values().all(|&count| count == 4) {
+            return Ok(());
+        }
+        let mut error= String::new();
+        error.push_str("Error, the position is invalid! Please count the characters: \n");
+        for (&character, &count) in char_count.iter() {
+            if count != 4 {
+                write!(error, "Character: '{}', Count: {}\n", character, count).unwrap();
+            }
+        }
+        Err(error)
     }
 
     pub fn getNextPossiblePositions(&self, myIndex: usize) -> Vec<Position> {
@@ -47,6 +74,34 @@ impl Position {
         }
         result
     }
+
+    pub fn toString(&self, possiblePrevious: Option<&Position>) -> Result<String, String> {
+        let mut out= String::new();
+        let length= self.bottles.len();
+        if let Some(previous) = possiblePrevious {
+            if previous.bottles.len() != length {
+                return Err("Two positions have different length!".to_string());
+            }
+        }
+        for i in (0..4).rev() {
+            for j in 0..length {
+                if j > 0 && j % ((length + 2) / 3) == 0 {
+                    out.push_str("  ");
+                }
+                let ourBottle= &self.bottles[j];
+                // if previous exists and our bottles aren't equal, make our bottle bold
+                if let Some(_) = possiblePrevious.filter(|p| ourBottle != &p.bottles[j]) {
+                    write!(out, "❚{}❚", ourBottle.content[i]).unwrap();
+                } else {
+                    write!(out, "|{}|", ourBottle.content[i]).unwrap();
+                }
+                
+            }
+            writeln!(out).unwrap();
+        }
+        writeln!(out, "------------------------------------------------").unwrap();
+        Ok(out)
+    }
 }
 
 impl PartialEq for Position {
@@ -64,13 +119,49 @@ impl Hash for Position {
     }
 }
 
+impl fmt::Display for Position {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for i in (0..4).rev() {
+            for bottle in &self.bottles {
+                write!(f, "|{}|", bottle.content[i])?;
+            }
+            writeln!(f)?;
+        }
+        writeln!(f, "------------------------------------------------")?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
     use super::*;
+    use std::collections::HashSet;
 
     #[test]
     fn checkNextPositions() {
+        let bottle1= Bottle::new([ 'A', 'A', ' ', ' ']);
+        let bottle2= Bottle::new([ 'B', 'B', 'A', ' ']);
+        let bottle4= Bottle::new([ 'B', 'B', ' ', ' ']);
+        let bottle5= Bottle::new([ 'B', 'B', 'B', ' ']);
+        let pos1= Position::new(vec![bottle1, bottle2, bottle4, bottle5], 0);
+        let newPositions= pos1.getNextPossiblePositions(0);
+        assert_eq!(newPositions.len(), 4);
+        let expectedIdentities: HashSet<Vec<char>> = HashSet::from_iter([
+            vec!['A', 'A', 'A', ' ', 'B', 'B', ' ', ' ', 'B', 'B', ' ', ' ', 'B', 'B', 'B', ' '],
+            vec!['A', ' ', ' ', ' ', 'B', 'B', ' ', ' ', 'B', 'B', 'A', 'A', 'B', 'B', 'B', ' '],
+            vec!['A', 'A', ' ', ' ', 'B', ' ', ' ', ' ', 'B', 'B', 'A', ' ', 'B', 'B', 'B', 'B']
+        ].iter().cloned());
+//        println!("Checker:");
+//        for identity in &expectedIdentities {
+//            println!("{:?}", identity);
+//        }
+//        println!("Result:");
+        newPositions.iter().for_each(|position| { /* println!("{:?}", position.identity); */ assert_eq!(expectedIdentities.contains(&position.identity), true) });
+    }
+
+    #[test]
+    fn checkNumNextPositions() {
         let bottle1= Bottle::new([ 'A', 'A', ' ', ' ']);
         let bottle2= Bottle::new([ 'B', 'B', 'A', ' ']);
         let bottle3= Bottle::new([ 'A', 'A', 'A', ' ']);
@@ -79,8 +170,8 @@ mod tests {
         let pos1= Position::new(vec![bottle1, bottle2, bottle3, bottle4, bottle5], 0);
         let newPositions= pos1.getNextPossiblePositions(0);
         assert_eq!(newPositions.len(), 8);
-        for pos in &newPositions {
-            println!("{:?}", pos);
-        }
+//        for pos in &newPositions {
+//            println!("{:?}", pos);
+//        }
     }
 }
