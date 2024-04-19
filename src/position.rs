@@ -8,16 +8,16 @@ use crate::bottle::*;
 pub struct Position {
     bottles: Vec<Bottle>,
     pub previous: usize,
-    pub identity: Vec<char>
+    pub identity: Vec<u8>
 }
 
 impl Position {
     pub fn new(bottles: Vec<Bottle>, previous: usize) -> Self {
         let mut cloned_bottles = bottles.clone();
         cloned_bottles.sort();
-        let identity: Vec<char> = cloned_bottles
-            .iter()
-            .flat_map(|bottle| bottle.content.iter().copied())
+        let identity: Vec<u8> = cloned_bottles
+            .into_iter()
+            .flat_map(|bottle| bottle.content.into_iter())
             .collect();
         Self { bottles, previous, identity }
     }
@@ -31,7 +31,7 @@ impl Position {
         // Iterate over each array and then each character in the array
         for bottle in &self.bottles {
             for &ch in bottle.content.iter() {
-                if ch != ' ' {
+                if ch != ' ' as u8 {
                     *char_count.entry(ch).or_insert(0) += 1;
                 }
             }
@@ -91,9 +91,9 @@ impl Position {
                 let ourBottle= &self.bottles[j];
                 // if previous exists and our bottles aren't equal, make our bottle bold
                 if let Some(_) = possiblePrevious.filter(|p| ourBottle != &p.bottles[j]) {
-                    write!(out, "❚{}❚", ourBottle.content[i]).unwrap();
+                    write!(out, "❚{}❚", ourBottle.content[i] as char).unwrap();
                 } else {
-                    write!(out, "|{}|", ourBottle.content[i]).unwrap();
+                    write!(out, "|{}|", ourBottle.content[i] as char).unwrap();
                 }
                 
             }
@@ -123,7 +123,7 @@ impl fmt::Display for Position {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for i in (0..4).rev() {
             for bottle in &self.bottles {
-                write!(f, "|{}|", bottle.content[i])?;
+                write!(f, "|{}|", bottle.content[i] as char)?;
             }
             writeln!(f)?;
         }
@@ -140,18 +140,24 @@ mod tests {
 
     #[test]
     fn checkNextPositions() {
-        let bottle1= Bottle::new([ 'A', 'A', ' ', ' ']);
-        let bottle2= Bottle::new([ 'B', 'B', 'A', ' ']);
-        let bottle4= Bottle::new([ 'B', 'B', ' ', ' ']);
-        let bottle5= Bottle::new([ 'B', 'B', 'B', ' ']);
+        let bottle1= Bottle::newChars([ 'A', 'A', ' ', ' ']);
+        let bottle2= Bottle::newChars([ 'B', 'B', 'A', ' ']);
+        let bottle4= Bottle::newChars([ 'B', 'B', ' ', ' ']);
+        let bottle5= Bottle::newChars([ 'B', 'B', 'B', ' ']);
         let pos1= Position::new(vec![bottle1, bottle2, bottle4, bottle5], 0);
         let newPositions= pos1.getNextPossiblePositions(0);
         assert_eq!(newPositions.len(), 4);
-        let expectedIdentities: HashSet<Vec<char>> = HashSet::from_iter([
+        let expectedIdentities: HashSet<Vec<u8>> = Vec::from_iter([
             vec!['A', 'A', 'A', ' ', 'B', 'B', ' ', ' ', 'B', 'B', ' ', ' ', 'B', 'B', 'B', ' '],
             vec!['A', ' ', ' ', ' ', 'B', 'B', ' ', ' ', 'B', 'B', 'A', 'A', 'B', 'B', 'B', ' '],
             vec!['A', 'A', ' ', ' ', 'B', ' ', ' ', ' ', 'B', 'B', 'A', ' ', 'B', 'B', 'B', 'B']
-        ].iter().cloned());
+        ]).into_iter()
+        .map(|inner_vec| 
+            {
+                inner_vec.into_iter()
+                .map(|c| c as u8) // Safe cast, as all chars are guaranteed to be ASCII
+                .collect::<Vec<u8>>() // Collect bytes into Vec<u8>
+            }).collect();
 //        println!("Checker:");
 //        for identity in &expectedIdentities {
 //            println!("{:?}", identity);
@@ -162,11 +168,11 @@ mod tests {
 
     #[test]
     fn checkNumNextPositions() {
-        let bottle1= Bottle::new([ 'A', 'A', ' ', ' ']);
-        let bottle2= Bottle::new([ 'B', 'B', 'A', ' ']);
-        let bottle3= Bottle::new([ 'A', 'A', 'A', ' ']);
-        let bottle4= Bottle::new([ 'B', 'B', ' ', ' ']);
-        let bottle5= Bottle::new([ 'B', 'B', 'B', ' ']);
+        let bottle1= Bottle::newChars([ 'A', 'A', ' ', ' ']);
+        let bottle2= Bottle::newChars([ 'B', 'B', 'A', ' ']);
+        let bottle3= Bottle::newChars([ 'A', 'A', 'A', ' ']);
+        let bottle4= Bottle::newChars([ 'B', 'B', ' ', ' ']);
+        let bottle5= Bottle::newChars([ 'B', 'B', 'B', ' ']);
         let pos1= Position::new(vec![bottle1, bottle2, bottle3, bottle4, bottle5], 0);
         let newPositions= pos1.getNextPossiblePositions(0);
         assert_eq!(newPositions.len(), 8);

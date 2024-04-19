@@ -7,8 +7,8 @@ struct Move {
 
 pub struct BFS {
     moves: Vec<Move>,
-    uniquePositions: HashSet<Vec<char>>,
-    syntropy: u32
+    uniquePositions: HashSet<Vec<u8>>,
+    syntropy: usize
 }
 
 impl Move {
@@ -25,7 +25,7 @@ impl BFS {
     pub fn new(initialPosition: Position) -> Self {
         Self { moves: vec![Move::new(vec![initialPosition.clone()]) ],
                uniquePositions: HashSet::from_iter(std::iter::once(initialPosition.identity)),
-               syntropy: u32::MAX}
+               syntropy: 0}
     }
 
     pub fn solve(&mut self) -> Option<Vec<Position>> {
@@ -73,14 +73,26 @@ impl BFS {
         let mut newMove= Move::new(Vec::new());
         let currentPositions= &self.moves[self.moves.len() - 1].positions;
         let mut candidates= 0;
+        let mut newSyntropy= 0;
         for positionIndex in 0..currentPositions.len() {
             newMove.positions.extend(currentPositions[positionIndex]
                 .getNextPossiblePositions(positionIndex)
                 .into_iter()
-                .filter(|position| { candidates += 1; self.uniquePositions.insert(position.identity.clone()) } ));
+                .filter(|position| { candidates += 1; self.uniquePositions.insert(position.identity.clone()) } )
+                .inspect(|position| { let syntropy= BFS::getSyntropy(&position.identity);
+                                      if syntropy > newSyntropy {
+                                          newSyntropy= syntropy;
+                                      } }));
         }
         println!("Iteration: {}, Candidates: {}, Moves: {}", self.moves.len() + 1, candidates, newMove.positions.len());
         println!("Pruned {} dead positions", self.compactBFS(self.moves.len() - 1));
+        /*if newSyntropy > self.syntropy {
+            println!("New syntropy is {}", newSyntropy);
+            self.syntropy= newSyntropy;
+            let oldHashSize= self.uniquePositions.len();
+            self.uniquePositions.retain(|identity| BFS::getSyntropy(identity) >= newSyntropy);
+            println!("Compacting unique positions hash from {} to {}", oldHashSize, self.uniquePositions.len());
+        } */
         self.moves.push(newMove);
     }
 
@@ -92,5 +104,33 @@ impl BFS {
         let mut previousMoves = self.buildSolutionVector(moveIndex - 1, position.previous);
         previousMoves.push(position);
         previousMoves
+    }
+
+    fn getSyntropy(identity: &Vec<u8>) -> usize {
+        let mut syntropy= 0;
+        for i in 0..(identity.len() / 4) {
+            for j in 0..3 {
+                if identity[i*4 + j] != (' ' as u8) && identity[i*4 + j] == identity[i*4 + j + 1] {
+                    syntropy += 1;
+                }
+            }
+        }
+        syntropy
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn checkSyntropy() {
+        let identity= vec!['A', 'A', ' ', ' ', 'B', 'B','C', 'C']
+            .into_iter().map(|c| c as u8).collect();
+        assert_eq!(BFS::getSyntropy(&identity), 3);
+        let identity= vec!['A', 'A', ' ', ' ', 'B', 'B','C', 'C', 'C', 'C', 'A', 'A']
+            .into_iter().map(|c| c as u8).collect();
+        assert_eq!(BFS::getSyntropy(&identity), 5);
     }
 }

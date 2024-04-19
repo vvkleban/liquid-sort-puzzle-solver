@@ -39,20 +39,22 @@ fn handleInputData() -> Result<(), ()> {
     for line in handle.lines() {
         let line = line.expect("Failed to read line");
         
-        // Filter out spaces and collect chars
-        let chars: Vec<char> = line.chars().collect();
-        
         // Skip empty or whitespace-only lines
-        if chars.is_empty() || chars[0] == '#' {
+        if line.is_empty() || line.starts_with('#') {
             continue;
         }
 
+        if !line.is_ascii() {
+            println!("Error: All characters must be ASCII");
+            return Err(());
+        }
+
         // Check if the line contains exactly four characters
-        if chars.len() == 4 {
-            let array: [char; 4] = chars.try_into().unwrap();
+        if line.len() == 4 {
+            let array: [u8; 4] = line.as_bytes().to_vec().try_into().unwrap();
             data.push(Bottle::new(array));
         } else {
-            println!("Error: Each line must contain exactly four characters (spaces ignored).");
+            println!("Error: Each line must contain exactly four characters.");
             return Err(());
         }
     }
