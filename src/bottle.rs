@@ -1,6 +1,8 @@
+/// Representation of a bottle in a liquid sort game
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Bottle {
-   pub content: [u8; 4]
+    // ascii letters represent colors. ' ' (space) represents empty space
+    pub content: [u8; 4]
 }
 
 impl Bottle {
@@ -8,12 +10,10 @@ impl Bottle {
         Self { content }
     }
 
-    pub fn newChars(content: [char; 4]) -> Self {
-        let byteArray= [ content[0] as u8, content[1] as u8, content[2] as u8, content[3] as u8 ];
-        Self { content: byteArray }
-    }
-
     #[inline]
+    /// Checks if the bottle is in a "solved" state.
+    /// A bottle is considered solved if all its content slots contain the same non-space character, 
+    /// or if the first slot is a space, implying the bottle is empty or correctly arranged.
     pub fn isSolved(&self) -> bool {
         if self.content[0] == ' ' as u8 {
             return true;
@@ -23,6 +23,7 @@ impl Bottle {
     }
 
     #[inline]
+    /// Return the top empty slot index
     pub fn getTopIndex(&self) -> usize {
         let mut i: usize= 3;
         while self.content[i] == (' ' as u8) && i > 0 {
@@ -31,6 +32,15 @@ impl Bottle {
         i
     }
 
+    /// Transfers content from another `Bottle` (`other`) into this bottle.
+    /// Filling starts from the topmost non-empty slot of the other bottle and ends either
+    /// when this bottle is full or the other bottle has no more content to transfer.
+    ///
+    /// # Parameters
+    /// * `other` - A mutable reference to another `Bottle` from which content will be transferred.
+    ///
+    /// # Returns
+    /// `true` if any content was transferred, `false` otherwise.
     pub fn fillFrom(&mut self, other: &mut Bottle) -> bool {
         let mut otherTopIndex: isize= other.getTopIndex() as isize;
         if other.content[otherTopIndex as usize] == ' ' as u8 {
@@ -65,6 +75,13 @@ impl Bottle {
 mod tests {
 
     use super::*;
+
+    impl Bottle {
+        pub fn newChars(content: [char; 4]) -> Self {
+            let byteArray= [ content[0] as u8, content[1] as u8, content[2] as u8, content[3] as u8 ];
+            Self { content: byteArray }
+        }
+    }
 
     #[test]
     fn fillCopySingleColor() {

@@ -1,13 +1,26 @@
 use std::collections::HashSet;
+use std::collections::HashMap;
 use crate::position::*;
 
+/// Represents a move in the BFS algorithm which consists of a list of positions.
 struct Move {
-    positions: Vec<Position>
+    positions: Vec<Position> // All unique (barring permutations) positions reachable by this move
 }
 
+/// Handles the BFS (Breadth-First Search) process for solving a puzzle.
 pub struct BFS {
-    moves: Vec<Move>,
-    uniquePositions: HashSet<Vec<u8>>,
+    // All reachable positions arranged per move starting from the initial position
+    moves: Vec<Move>, 
+    // Collision sets to make sure all positions recorded are truly unique (barring bottle
+    // permutations). The sets are arranged per syntropy, where each syntropy value maps to a set
+    // of positions with this syntropy value.
+    // The syntropy value is a measure of the orderliness of a position: how many consecutive slots
+    // in every bottle are filled with the same color. E.g. a Bottle "BAAA" will have a syntropy
+    // value of 2, because two 'A' are stacked on another 'A'. A syntropy can never decrease
+    // between the moves. It can only increase or stay the same (in case we transfer some color to
+    // an empty bottle)
+    uniquePositions: HashMap<usize,HashSet<Vec<u8>>>,
+    // Minimum syntropy of the positions in the last move
     syntropy: usize
 }
 
@@ -16,18 +29,35 @@ impl Move {
         Self { positions }
     }
 
+    #[inline]
+    /// Returns the number of choices available in this move, equating to the number of positions.
     pub fn choices(&self) -> usize {
         self.positions.len()
     }
 }
 
 impl BFS {
+    /// Constructs a new BFS instance with an initial position, initializes the `uniquePositions` map,
+    /// and calculates the initial syntropy based on the identity of the initial position.
+    ///
+    /// # Arguments
+    /// * `initialPosition` - The starting point of the BFS.
     pub fn new(initialPosition: Position) -> Self {
-        Self { moves: vec![Move::new(vec![initialPosition.clone()]) ],
-               uniquePositions: HashSet::from_iter(std::iter::once(initialPosition.identity)),
-               syntropy: 0}
+        let syntropy= BFS::getSyntropy(&initialPosition.identity);
+        let firstHS= HashSet::from_iter(std::iter::once(initialPosition.identity.clone()));
+        let mv= Move::new(vec![initialPosition]);
+        let mut HM= HashMap::new();
+        HM.insert(syntropy, firstHS);
+        Self { moves: vec![ mv ],
+               uniquePositions: HM,
+               syntropy}
     }
 
+    /// Executes the BFS algorithm to find a solution.
+    ///
+    /// # Returns
+    /// `Option<Vec<Position>>` representing the sequence of moves to solve the puzzle if a solution is found.
+    /// `None` if no solution is possible.
     pub fn solve(&mut self) -> Option<Vec<Position>> {
         loop {
             let aMove= &self.moves[self.moves.len() - 1];
@@ -36,7 +66,7 @@ impl BFS {
                 return None
             }
             // Look for a solution in a given move
-            for positionIndex in 0..aMove.positions.len() {
+            for positionIndex in 0..aMove.choices() {
                 if aMove.positions[positionIndex].isSolved() {
                     return Some(self.buildSolutionVector(self.moves.len() - 1, positionIndex));
                 }
@@ -46,56 +76,84 @@ impl BFS {
         }
     }
 
+    /// Recursively compacts the BFS tree from a specified index to remove redundant positions and save space.
+    ///
+    /// # Arguments
+    /// * `index` - The index from where to start the compaction process.
+    ///
+    /// # Returns
+    /// The number of positions that were removed during compaction.
     fn compactBFS(&mut self, index: usize) -> usize {
         if index < 1 { return 0; }
         let (previousMoves, newMove)= self.moves.split_at_mut(index);
         let currentPositions= &mut newMove[0].positions;
         let oldPositions= &previousMoves[index - 1].positions;
         let mut compactedOldPositions= Vec::new();
-        let mut deleted= 0;
         let mut lastOldIndex: isize= -1;
         for newPositionIndex in 0..currentPositions.len() {
             let currentPosition= &mut currentPositions[newPositionIndex];
             let previous= currentPosition.previous;
             if previous as isize > lastOldIndex {
                 compactedOldPositions.push(oldPositions[previous].clone());
-                deleted += previous - (lastOldIndex as usize) + 1;
                 lastOldIndex= previous as isize;
             }
             currentPosition.previous= compactedOldPositions.len() - 1;
         }
+        let deleted= oldPositions.len() - compactedOldPositions.len();
         previousMoves[index - 1].positions= compactedOldPositions;
-        deleted += self.compactBFS(index - 1);
-        deleted
+        deleted + self.compactBFS(index - 1)
     }
 
+    /// Generates a new move vector consisting of all possible new positions from all reachable positions 
+    /// in the latest move and updates the BFS structure accordingly.
     fn generateNewMoveChoices(&mut self) {
         let mut newMove= Move::new(Vec::new());
         let currentPositions= &self.moves[self.moves.len() - 1].positions;
         let mut candidates= 0;
-        let mut newSyntropy= 0;
+        let mut newMinSyntropy= usize::MAX;
         for positionIndex in 0..currentPositions.len() {
-            newMove.positions.extend(currentPositions[positionIndex]
-                .getNextPossiblePositions(positionIndex)
-                .into_iter()
-                .filter(|position| { candidates += 1; self.uniquePositions.insert(position.identity.clone()) } )
-                .inspect(|position| { let syntropy= BFS::getSyntropy(&position.identity);
-                                      if syntropy > newSyntropy {
-                                          newSyntropy= syntropy;
-                                      } }));
+            for candidate in currentPositions[positionIndex]
+                  .getNextPossiblePositions(positionIndex) 
+            {
+                candidates += 1;
+                let syntropy= BFS::getSyntropy(&candidate.identity);
+                if !self.uniquePositions
+                    .entry(syntropy)
+                    .or_insert_with(HashSet::new)
+                    .insert(candidate.identity.clone())
+                {
+                    continue;
+                }
+                if syntropy < newMinSyntropy {
+                    newMinSyntropy= syntropy;
+                }
+                newMove.positions.push(candidate);
+            }
         }
         println!("Iteration: {}, Candidates: {}, Moves: {}", self.moves.len() + 1, candidates, newMove.positions.len());
-        println!("Pruned {} dead positions", self.compactBFS(self.moves.len() - 1));
-        /*if newSyntropy > self.syntropy {
-            println!("New syntropy is {}", newSyntropy);
-            self.syntropy= newSyntropy;
+        if self.moves.len() % 5 == 0 {
+            println!("Pruned {} dead positions", self.compactBFS(self.moves.len() - 1));
+        }
+        if newMinSyntropy > self.syntropy {
+            println!("New syntropy is {}", newMinSyntropy);
+            self.syntropy= newMinSyntropy;
             let oldHashSize= self.uniquePositions.len();
-            self.uniquePositions.retain(|identity| BFS::getSyntropy(identity) >= newSyntropy);
+            self.uniquePositions.retain(|&syn, _| syn >= newMinSyntropy);
             println!("Compacting unique positions hash from {} to {}", oldHashSize, self.uniquePositions.len());
-        } */
+        } 
         self.moves.push(newMove);
     }
 
+    /// Constructs a vector of `Position` objects representing the path from the initial position to
+    /// the given position in the solution sequence. It is used to provide a solution to the
+    /// puzzle. In fact - the shortest possible solution as per BFS algorithm
+    ///
+    /// # Arguments
+    /// * `moveIndex` - Index of the move in `moves`.
+    /// * `positionIndex` - Index of the position in the move specified by `moveIndex`.
+    ///
+    /// # Returns
+    /// A vector of `Position` instances tracing the path from the start to the specified position.
     fn buildSolutionVector(&self, moveIndex: usize, positionIndex: usize) -> Vec<Position> {
         let position= self.moves[moveIndex].positions[positionIndex].clone();
         if moveIndex == 0 {
@@ -106,6 +164,14 @@ impl BFS {
         previousMoves
     }
 
+    /// Calculates the syntropy value for a given identity of a position.
+    /// Syntropy measures the orderliness based on consecutive identical slots in each bottle.
+    ///
+    /// # Arguments
+    /// * `identity` - A reference to the identity vector of a position.
+    ///
+    /// # Returns
+    /// An usize representing the syntropy value.
     fn getSyntropy(identity: &Vec<u8>) -> usize {
         let mut syntropy= 0;
         for i in 0..(identity.len() / 4) {

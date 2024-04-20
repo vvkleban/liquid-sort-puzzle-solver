@@ -5,10 +5,13 @@ use std::fmt;
 use crate::bottle::*;
 
 #[derive(Debug, Clone)]
+/// Represents a specific arrangement or position of bottles.
 pub struct Position {
-    bottles: Vec<Bottle>,
-    pub previous: usize,
-    pub identity: Vec<u8>
+    bottles: Vec<Bottle>, // Holds the current arrangement of bottles.
+    pub previous: usize,  // Index of the previous position in the game
+    // Unique identifier based on the sorted contents of the bottles.
+    // Allows to identify identical positions with all bottle permutations
+    pub identity: Vec<u8> 
 }
 
 impl Position {
@@ -22,10 +25,18 @@ impl Position {
         Self { bottles, previous, identity }
     }
 
+    #[inline]
+    /// # Returns
+    /// `true` if all bottles are solved, otherwise `false`.
     pub fn isSolved(&self) -> bool {
         self.bottles.iter().all(|bottle| bottle.isSolved())
     }
 
+    /// Validates that all characters (colors) in the bottles appear exactly 4 times,
+    /// ensuring the position meets game rules.
+    ///
+    /// # Returns
+    /// `Ok(())` if the validation passes, otherwise `Err` with a message detailing inconsistencies.
     pub fn isValid(&self) -> Result<(), String> {
         let mut char_count = HashMap::new();
         // Iterate over each array and then each character in the array
@@ -50,6 +61,14 @@ impl Position {
         Err(error)
     }
 
+    /// Generates all valid next positions reachable in one move by attempting to transfer contents
+    /// between each pair of bottles.
+    ///
+    /// # Arguments
+    /// * `myIndex` - The current position's index, used as the `previous` index for new positions.
+    ///
+    /// # Returns
+    /// A vector of `Position` instances representing all possible next states.
     pub fn getNextPossiblePositions(&self, myIndex: usize) -> Vec<Position> {
         let mut result: Vec<Position>= Vec::new();
         let mut newBottles= self.bottles.clone();
@@ -75,6 +94,14 @@ impl Position {
         result
     }
 
+    /// Creates a string representation of the position,
+    /// optionally highlighting differences from a previous position.
+    ///
+    /// # Arguments
+    /// * `possiblePrevious` - An optional reference to a previous position for comparison.
+    ///
+    /// # Returns
+    /// `Ok(String)` containing the formatted position or an `Err(String)` if there's a length mismatch.
     pub fn toString(&self, possiblePrevious: Option<&Position>) -> Result<String, String> {
         let mut out= String::new();
         let length= self.bottles.len();
