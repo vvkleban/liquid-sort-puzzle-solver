@@ -130,7 +130,7 @@ impl BFS {
                 newMove.positions.push(candidate);
             }
         }
-        println!("Iteration: {}, Candidates: {}, Moves: {}", self.moves.len() + 1, candidates, newMove.positions.len());
+        println!("Iteration: {}, Candidates: {}, Moves: {}", self.moves.len(), candidates, newMove.positions.len());
         if self.moves.len() % 5 == 0 {
             println!("Pruned {} dead positions", self.compactBFS(self.moves.len() - 1));
         }
