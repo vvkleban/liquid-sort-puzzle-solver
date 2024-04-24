@@ -173,11 +173,6 @@ mod tests {
                 .map(|c| c as u8) // Safe cast, as all chars are guaranteed to be ASCII
                 .collect::<Vec<u8>>() // Collect bytes into Vec<u8>
             }).collect();
-//        println!("Checker:");
-//        for identity in &expectedIdentities {
-//            println!("{:?}", identity);
-//        }
-//        println!("Result:");
         newPositions.iter().for_each(|position| { /* println!("{:?}", position.identity); */ assert_eq!(expectedIdentities.contains(&position.getIdentity()), true) });
     }
 

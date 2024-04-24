@@ -8,7 +8,6 @@ pub struct Astar {
     // Collision sets to make sure all positions recorded are truly unique (barring bottle
     // permutations). 
     uniquePositions: HashSet<Vec<u8>>,
-    maximumSyntropy: u32
 }
 
 impl Astar {
@@ -19,15 +18,9 @@ impl Astar {
     /// * `initialPosition` - The starting point of the BFS.
     pub fn new(initialPosition: PositionAstar) -> Self {
         let uniquePositions= HashSet::from_iter(std::iter::once(initialPosition.getIdentity()));
-        let maximumSyntropy= Astar::getMaximumSyntropy(&initialPosition);
         let heap= BinaryHeap::from_iter(std::iter::once(Rc::new(initialPosition)));
         Self { heap,
-               uniquePositions,
-               maximumSyntropy }
-    }
-
-    fn getMaximumSyntropy(initialPosition: &PositionAstar) -> u32 {
-        (initialPosition.getNumColors() as u32) * 3
+               uniquePositions }
     }
 
     /// Executes the A* algorithm to find a solution.
@@ -40,16 +33,13 @@ impl Astar {
             if candidate.isSolved() {
                 return Some(Astar::buildSolutionVector(candidate));
             }
-            for position in PositionAstar::getNextPossiblePositions(&candidate, self.maximumSyntropy) {
-                //println!("Generated new position:\n{}", &position);
+            for position in PositionAstar::getNextPossiblePositions(&candidate) {
                 let candidateIdentity= position.getIdentity();
-                //println!("Generated new position identity:\n{:?}", &candidateIdentity);
                 if !self.uniquePositions.insert(candidateIdentity) {
                     continue;
                 } 
                 self.heap.push(position);
             }
-            //println!("Heap size: {}", self.heap.len());
         }
         None
     }

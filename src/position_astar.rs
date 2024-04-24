@@ -97,16 +97,22 @@ impl PositionAstar {
     ///
     /// # Returns
     /// An usize representing the syntropy value.
-    fn getSyntropy(bottles: &Vec<Bottle>) -> u32 {
-        let mut syntropy= 0;
+    fn getHeuristic(bottles: &Vec<Bottle>) -> u32 {
+        let mut heuristic: u32= 0;
+        let mut set = HashSet::new();
+        // Count how many color towers minus the bottom color are in the bottles
+        // This is the minimum moves we need to make to move non-bottom colors
         for b in bottles {
-            for i in 0..3 {
-                if b.content[i] != (' ' as u8) && b.content[i] == b.content[i+1] {
-                    syntropy += 1;
-                }
+            if b.isEmpty() {
+                continue;
+            }
+            heuristic += (b.getColorTowers() as u32) - 1;
+            // If a bottom color occurs more than once, it's at least one move
+            if !set.insert(b.content[0]) {
+                heuristic += 1;
             }
         }
-        syntropy 
+        heuristic
     }
 
     /// Generates all valid next positions reachable in one move by attempting to transfer contents
@@ -118,7 +124,7 @@ impl PositionAstar {
     ///
     /// # Returns
     /// A vector of `Position` instances representing all possible next states.
-    pub fn getNextPossiblePositions(parent: &Rc<PositionAstar>, targetSyntropy: u32) -> Vec<Rc<PositionAstar>> {
+    pub fn getNextPossiblePositions(parent: &Rc<PositionAstar>) -> Vec<Rc<PositionAstar>> {
         let mut result= Vec::new();
         let mut newBottles= parent.bottles.clone();
         let bottleNum= newBottles.len();
@@ -127,16 +133,16 @@ impl PositionAstar {
                 if i < j {
                     let (left, right) = newBottles.split_at_mut(j);
                     if left[i].fillFrom(&mut right[0]) {
-                        let newSyntropy= PositionAstar::getSyntropy(&newBottles);
-                        result.push(Rc::new(PositionAstar::newChild(newBottles, Some(parent.clone()), parent.currentCost + 1, targetSyntropy - newSyntropy)));
+                        let newHeuristic= PositionAstar::getHeuristic(&newBottles);
+                        result.push(Rc::new(PositionAstar::newChild(newBottles, Some(parent.clone()), parent.currentCost + 1, newHeuristic)));
                         newBottles= parent.bottles.clone();
                     }
                 }
                 else if i > j {
                     let (left, right) = newBottles.split_at_mut(i);
                     if right[0].fillFrom(&mut left[j]) {
-                        let newSyntropy= PositionAstar::getSyntropy(&newBottles);
-                        result.push(Rc::new(PositionAstar::newChild(newBottles, Some(parent.clone()), parent.currentCost + 1, targetSyntropy - newSyntropy)));
+                        let newHeuristic= PositionAstar::getHeuristic(&newBottles);
+                        result.push(Rc::new(PositionAstar::newChild(newBottles, Some(parent.clone()), parent.currentCost + 1, newHeuristic)));
                         newBottles= parent.bottles.clone();
                     }
                 }
@@ -205,10 +211,6 @@ impl PartialOrd for PositionAstar {
 impl Ord for PositionAstar {
     #[inline]
     fn cmp(&self, other: &Self) -> Ordering {
-        if other.totalProjectedCost == self.totalProjectedCost {
-            // Depth-first - prioritize higher current cost
-            return self.currentCost.cmp(&other.currentCost);
-        }
         // Prioritize lower projected total cost
         other.totalProjectedCost.cmp(&self.totalProjectedCost)
     }
@@ -227,7 +229,7 @@ mod tests {
         let bottle4= Bottle::newChars([ 'B', 'B', ' ', ' ']);
         let bottle5= Bottle::newChars([ 'B', 'B', 'B', ' ']);
         let pos1= Rc::new(PositionAstar::new(vec![bottle1, bottle2, bottle4, bottle5]));
-        let newPositions= PositionAstar::getNextPossiblePositions(&pos1, 100);
+        let newPositions= PositionAstar::getNextPossiblePositions(&pos1);
         assert_eq!(newPositions.len(), 4);
         let expectedIdentities: HashSet<Vec<u8>> = Vec::from_iter([
             vec!['A', 'A', 'A', ' ', 'B', 'B', ' ', ' ', 'B', 'B', ' ', ' ', 'B', 'B', 'B', ' '],
@@ -240,12 +242,7 @@ mod tests {
                 .map(|c| c as u8) // Safe cast, as all chars are guaranteed to be ASCII
                 .collect::<Vec<u8>>() // Collect bytes into Vec<u8>
             }).collect();
-//        println!("Checker:");
-//        for identity in &expectedIdentities {
-//            println!("{:?}", identity);
-//        }
-//        println!("Result:");
-        newPositions.iter().for_each(|position| { /* println!("{:?}", position.identity); */ assert_eq!(expectedIdentities.contains(&position.getIdentity()), true) });
+        newPositions.iter().for_each(|position| { assert_eq!(expectedIdentities.contains(&position.getIdentity()), true) });
     }
 
     #[test]
@@ -256,10 +253,20 @@ mod tests {
         let bottle4= Bottle::newChars([ 'B', 'B', ' ', ' ']);
         let bottle5= Bottle::newChars([ 'B', 'B', 'B', ' ']);
         let pos1= Rc::new(PositionAstar::new(vec![bottle1, bottle2, bottle3, bottle4, bottle5]));
-        let newPositions= PositionAstar::getNextPossiblePositions(&pos1, 100);
+        let newPositions= PositionAstar::getNextPossiblePositions(&pos1);
         assert_eq!(newPositions.len(), 8);
-//        for pos in &newPositions {
-//            println!("{:?}", pos);
-//        }
+    }
+
+    #[test]
+    fn checkHeuristic() {
+        let bottle1= Bottle::newChars([ 'A', 'A', ' ', ' ']);
+        let bottle2= Bottle::newChars([ 'B', 'B', 'A', ' ']);
+        let bottle3= Bottle::newChars([ 'A', 'A', 'A', ' ']);
+        let bottle4= Bottle::newChars([ 'B', 'B', ' ', ' ']);
+        let bottle5= Bottle::newChars([ 'B', 'B', 'B', ' ']);
+        let mut bottles= vec![bottle1, bottle2, bottle3, bottle4, bottle5];
+        assert_eq!(PositionAstar::getHeuristic(&bottles), 4);
+        bottles.push(Bottle::newChars([ ' ', ' ', ' ', ' ' ]));
+        assert_eq!(PositionAstar::getHeuristic(&bottles), 4);
     }
 }

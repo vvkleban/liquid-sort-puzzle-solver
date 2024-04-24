@@ -11,11 +11,16 @@ impl Bottle {
     }
 
     #[inline]
+    pub fn isEmpty(&self) -> bool {
+        self.content[0] == ' ' as u8
+    }
+
+    #[inline]
     /// Checks if the bottle is in a "solved" state.
     /// A bottle is considered solved if all its content slots contain the same non-space character, 
     /// or if the first slot is a space, implying the bottle is empty or correctly arranged.
     pub fn isSolved(&self) -> bool {
-        if self.content[0] == ' ' as u8 {
+        if self.isEmpty() {
             return true;
         }
         let color= self.content[0];
@@ -30,6 +35,20 @@ impl Bottle {
             i-= 1;
         }
         i
+    }
+
+    /// Return how many towers of the same color are stacked in this bottle
+    pub fn getColorTowers(&self) -> usize {
+        if self.isEmpty() {
+            return 0;
+        }
+        let mut towers= 1;
+        for i in 1..4 {
+            if self.content[i] != (' ' as u8) && self.content[i] != self.content[i-1] {
+                towers += 1;
+            }
+        }
+        towers
     }
 
     /// Transfers content from another `Bottle` (`other`) into this bottle.
@@ -141,5 +160,13 @@ mod tests {
         assert!(mutated == false);
         assert_eq!(bottle1, bottle3);
         assert_eq!(bottle2, bottle4);
+    }
+
+    #[test]
+    fn checkTowers() {
+        assert_eq!(Bottle::getColorTowers(&Bottle::newChars([ 'A', 'A', ' ', ' '])), 1);
+        assert_eq!(Bottle::getColorTowers(&Bottle::newChars([ 'B', 'B', 'A', ' '])), 2);
+        assert_eq!(Bottle::getColorTowers(&Bottle::newChars([ 'A', 'B', 'D', 'C'])), 4);
+        assert_eq!(Bottle::getColorTowers(&Bottle::newChars([ ' ', ' ', ' ', ' '])), 0);
     }
 }
