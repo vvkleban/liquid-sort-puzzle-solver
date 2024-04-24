@@ -1,28 +1,44 @@
+use std::collections::HashSet;
 use std::collections::HashMap;
-use std::hash::{Hash, Hasher};
+use std::cmp::Ordering;
 use std::fmt::Write;
 use std::fmt;
+use std::rc::Rc;
 use crate::bottle::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 /// Represents a specific arrangement or position of bottles.
-pub struct Position {
+pub struct PositionAstar {
     bottles: Vec<Bottle>, // Holds the current arrangement of bottles.
-    pub previous: usize,  // Index of the previous position in the game
+    pub previous: Option<Rc<PositionAstar>>,  // Link to the previous position in the game
     // Unique identifier based on the sorted contents of the bottles.
     // Allows to identify identical positions with all bottle permutations
-    pub identity: Vec<u8> 
+    pub currentCost: u32,
+    pub totalProjectedCost: u32
 }
 
-impl Position {
-    pub fn new(bottles: Vec<Bottle>, previous: usize) -> Self {
-        let mut cloned_bottles = bottles.clone();
+impl PositionAstar {
+
+    pub fn new(bottles: Vec<Bottle>) -> PositionAstar {
+        PositionAstar::newChild(bottles, None, 0, 0)
+    }
+
+    pub fn newChild(
+        bottles: Vec<Bottle>,
+        previous: Option<Rc<PositionAstar>>,
+        currentCost: u32,
+        projectedCost: u32) -> Self
+    {
+        Self { bottles, previous, currentCost, totalProjectedCost: currentCost + projectedCost }
+    }
+
+    pub fn getIdentity(&self) -> Vec<u8> {
+        let mut cloned_bottles = self.bottles.clone();
         cloned_bottles.sort();
-        let identity: Vec<u8> = cloned_bottles
+        cloned_bottles
             .into_iter()
             .flat_map(|bottle| bottle.content.into_iter())
-            .collect();
-        Self { bottles, previous, identity }
+            .collect()
     }
 
     #[inline]
@@ -30,6 +46,18 @@ impl Position {
     /// `true` if all bottles are solved, otherwise `false`.
     pub fn isSolved(&self) -> bool {
         self.bottles.iter().all(|bottle| bottle.isSolved())
+    }
+
+    pub fn getNumColors(&self) -> usize {
+        let mut char_count = HashSet::new();
+        for bottle in &self.bottles {
+            for &ch in bottle.content.iter() {
+                if ch != ' ' as u8 {
+                    char_count.insert(ch);
+                }
+            }
+        }
+        char_count.len()
     }
 
     /// Validates that all characters (colors) in the bottles appear exactly 4 times,
@@ -61,32 +89,55 @@ impl Position {
         Err(error)
     }
 
+    /// Calculates the syntropy value for a given identity of a position.
+    /// Syntropy measures the orderliness based on consecutive identical slots in each bottle.
+    ///
+    /// # Arguments
+    /// * `identity` - A reference to the identity vector of a position.
+    ///
+    /// # Returns
+    /// An usize representing the syntropy value.
+    fn getSyntropy(bottles: &Vec<Bottle>) -> u32 {
+        let mut syntropy= 0;
+        for b in bottles {
+            for i in 0..3 {
+                if b.content[i] != (' ' as u8) && b.content[i] == b.content[i+1] {
+                    syntropy += 1;
+                }
+            }
+        }
+        syntropy 
+    }
+
     /// Generates all valid next positions reachable in one move by attempting to transfer contents
     /// between each pair of bottles.
     ///
     /// # Arguments
-    /// * `myIndex` - The current position's index, used as the `previous` index for new positions.
+    /// * `targetSyntropy` - The syntropy value of a puzzle solution (predictable and the same for
+    /// all solutions
     ///
     /// # Returns
     /// A vector of `Position` instances representing all possible next states.
-    pub fn getNextPossiblePositions(&self, myIndex: usize) -> Vec<Position> {
-        let mut result: Vec<Position>= Vec::new();
-        let mut newBottles= self.bottles.clone();
-        let bottleNum= self.bottles.len();
+    pub fn getNextPossiblePositions(parent: &Rc<PositionAstar>, targetSyntropy: u32) -> Vec<Rc<PositionAstar>> {
+        let mut result= Vec::new();
+        let mut newBottles= parent.bottles.clone();
+        let bottleNum= newBottles.len();
         for i in 0..bottleNum {
             for j in 0..bottleNum {
                 if i < j {
                     let (left, right) = newBottles.split_at_mut(j);
                     if left[i].fillFrom(&mut right[0]) {
-                        result.push(Position::new(newBottles, myIndex));
-                        newBottles= self.bottles.clone();
+                        let newSyntropy= PositionAstar::getSyntropy(&newBottles);
+                        result.push(Rc::new(PositionAstar::newChild(newBottles, Some(parent.clone()), parent.currentCost + 1, targetSyntropy - newSyntropy)));
+                        newBottles= parent.bottles.clone();
                     }
                 }
                 else if i > j {
                     let (left, right) = newBottles.split_at_mut(i);
                     if right[0].fillFrom(&mut left[j]) {
-                        result.push(Position::new(newBottles, myIndex));
-                        newBottles= self.bottles.clone();
+                        let newSyntropy= PositionAstar::getSyntropy(&newBottles);
+                        result.push(Rc::new(PositionAstar::newChild(newBottles, Some(parent.clone()), parent.currentCost + 1, targetSyntropy - newSyntropy)));
+                        newBottles= parent.bottles.clone();
                     }
                 }
             }
@@ -102,7 +153,7 @@ impl Position {
     ///
     /// # Returns
     /// `Ok(String)` containing the formatted position or an `Err(String)` if there's a length mismatch.
-    pub fn toString(&self, possiblePrevious: Option<&Position>) -> Result<String, String> {
+    pub fn toString(&self, possiblePrevious: Option<&PositionAstar>) -> Result<String, String> {
         let mut out= String::new();
         let length= self.bottles.len();
         if let Some(previous) = possiblePrevious {
@@ -131,22 +182,7 @@ impl Position {
     }
 }
 
-impl PartialEq for Position {
-    fn eq(&self, other: &Self) -> bool {
-        self.identity == other.identity
-    }
-}
-
-impl Eq for Position {}
-
-impl Hash for Position {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        // Hash of our identity is all that matters
-        self.identity.hash(state);
-    }
-}
-
-impl fmt::Display for Position {
+impl fmt::Display for PositionAstar {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for i in (0..4).rev() {
             for bottle in &self.bottles {
@@ -158,6 +194,25 @@ impl fmt::Display for Position {
         Ok(())
     }
 }
+
+impl PartialOrd for PositionAstar {
+    #[inline]
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for PositionAstar {
+    #[inline]
+    fn cmp(&self, other: &Self) -> Ordering {
+        if other.totalProjectedCost == self.totalProjectedCost {
+            // Depth-first - prioritize higher current cost
+            return self.currentCost.cmp(&other.currentCost);
+        }
+        // Prioritize lower projected total cost
+        other.totalProjectedCost.cmp(&self.totalProjectedCost)
+    }
+} 
 
 #[cfg(test)]
 mod tests {
@@ -171,8 +226,8 @@ mod tests {
         let bottle2= Bottle::newChars([ 'B', 'B', 'A', ' ']);
         let bottle4= Bottle::newChars([ 'B', 'B', ' ', ' ']);
         let bottle5= Bottle::newChars([ 'B', 'B', 'B', ' ']);
-        let pos1= Position::new(vec![bottle1, bottle2, bottle4, bottle5], 0);
-        let newPositions= pos1.getNextPossiblePositions(0);
+        let pos1= Rc::new(PositionAstar::new(vec![bottle1, bottle2, bottle4, bottle5]));
+        let newPositions= PositionAstar::getNextPossiblePositions(&pos1, 100);
         assert_eq!(newPositions.len(), 4);
         let expectedIdentities: HashSet<Vec<u8>> = Vec::from_iter([
             vec!['A', 'A', 'A', ' ', 'B', 'B', ' ', ' ', 'B', 'B', ' ', ' ', 'B', 'B', 'B', ' '],
@@ -190,7 +245,7 @@ mod tests {
 //            println!("{:?}", identity);
 //        }
 //        println!("Result:");
-        newPositions.iter().for_each(|position| { /* println!("{:?}", position.identity); */ assert_eq!(expectedIdentities.contains(&position.identity), true) });
+        newPositions.iter().for_each(|position| { /* println!("{:?}", position.identity); */ assert_eq!(expectedIdentities.contains(&position.getIdentity()), true) });
     }
 
     #[test]
@@ -200,8 +255,8 @@ mod tests {
         let bottle3= Bottle::newChars([ 'A', 'A', 'A', ' ']);
         let bottle4= Bottle::newChars([ 'B', 'B', ' ', ' ']);
         let bottle5= Bottle::newChars([ 'B', 'B', 'B', ' ']);
-        let pos1= Position::new(vec![bottle1, bottle2, bottle3, bottle4, bottle5], 0);
-        let newPositions= pos1.getNextPossiblePositions(0);
+        let pos1= Rc::new(PositionAstar::new(vec![bottle1, bottle2, bottle3, bottle4, bottle5]));
+        let newPositions= PositionAstar::getNextPossiblePositions(&pos1, 100);
         assert_eq!(newPositions.len(), 8);
 //        for pos in &newPositions {
 //            println!("{:?}", pos);

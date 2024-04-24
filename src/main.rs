@@ -1,17 +1,33 @@
 #![allow(non_snake_case)]
 mod bottle;
-mod position;
+mod position_bfs;
+mod position_astar;
 mod bfs;
+mod astar;
 
 use std::io::{self, BufRead};
 use std::process;
 use bottle::*;
-use position::*;
+use position_bfs::*;
+use position_astar::*;
 use bfs::*;
+use astar::*;
 
-fn printSolution(possibleSolution: Option<Vec<Position>>) {
+fn printSolution(possibleSolution: Option<Vec<PositionAstar>>) {
     if let Some(solution) = possibleSolution {
-        let mut oldPosition: Option<&Position>= None;
+        let mut oldPosition: Option<&PositionAstar>= None;
+        for i in 0..solution.len() {
+            println!("Step {}\n{}", i, solution[i].toString(oldPosition).unwrap());
+            oldPosition= Some(&solution[i]);
+        }
+    } else {
+        println!("No solution was found");
+    }
+}
+
+/* fn printSolution(possibleSolution: Option<Vec<PositionBFS>>) {
+    if let Some(solution) = possibleSolution {
+        let mut oldPosition: Option<&PositionBFS>= None;
         for i in 0..solution.len() {
             println!("{}", solution[i].toString(oldPosition).unwrap());
             oldPosition= Some(&solution[i]);
@@ -19,7 +35,7 @@ fn printSolution(possibleSolution: Option<Vec<Position>>) {
     } else {
         println!("No solution was found");
     }
-}
+} */
 
 /// Reads and processes input data from standard input to initialize and execute a BFS (Breadth-First Search)
 /// based solution finding process for a liquid sort puzzle
@@ -82,13 +98,20 @@ fn handleInputData() -> Result<(), ()> {
             return Err(());
         }
     }
-    let position= Position::new(data, 0);
+/*    let position= PositionBFS::new(data, 0);
     if let Some(error) = position.isValid().err() {
         println!("{}", error);
         return Err(());
     }
     let mut bfs= BFS::new(position);
-    printSolution(bfs.solve());
+    printSolution(bfs.solve()); */
+    let position= PositionAstar::new(data);
+    if let Some(error) = position.isValid().err() {
+        println!("{}", error);
+        return Err(());
+    }
+    let mut astar= Astar::new(position);
+    printSolution(astar.solve());
     Ok(())
 } 
 

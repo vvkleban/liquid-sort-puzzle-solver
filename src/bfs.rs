@@ -1,10 +1,10 @@
 use std::collections::HashSet;
 use std::collections::HashMap;
-use crate::position::*;
+use crate::position_bfs::*;
 
 /// Represents a move in the BFS algorithm which consists of a list of positions.
 struct Move {
-    positions: Vec<Position> // All unique (barring permutations) positions reachable by this move
+    positions: Vec<PositionBFS> // All unique (barring permutations) positions reachable by this move
 }
 
 /// Handles the BFS (Breadth-First Search) process for solving a puzzle.
@@ -25,7 +25,7 @@ pub struct BFS {
 }
 
 impl Move {
-    pub fn new(positions: Vec<Position>) -> Self {
+    pub fn new(positions: Vec<PositionBFS>) -> Self {
         Self { positions }
     }
 
@@ -42,9 +42,9 @@ impl BFS {
     ///
     /// # Arguments
     /// * `initialPosition` - The starting point of the BFS.
-    pub fn new(initialPosition: Position) -> Self {
-        let syntropy= BFS::getSyntropy(&initialPosition.identity);
-        let firstHS= HashSet::from_iter(std::iter::once(initialPosition.identity.clone()));
+    pub fn new(initialPosition: PositionBFS) -> Self {
+        let syntropy= BFS::getSyntropy(&initialPosition.getIdentity());
+        let firstHS= HashSet::from_iter(std::iter::once(initialPosition.getIdentity()));
         let mv= Move::new(vec![initialPosition]);
         let mut HM= HashMap::new();
         HM.insert(syntropy, firstHS);
@@ -58,7 +58,7 @@ impl BFS {
     /// # Returns
     /// `Option<Vec<Position>>` representing the sequence of moves to solve the puzzle if a solution is found.
     /// `None` if no solution is possible.
-    pub fn solve(&mut self) -> Option<Vec<Position>> {
+    pub fn solve(&mut self) -> Option<Vec<PositionBFS>> {
         loop {
             let aMove= &self.moves[self.moves.len() - 1];
             // If we ran out of move choices, there is no solution
@@ -116,11 +116,12 @@ impl BFS {
                   .getNextPossiblePositions(positionIndex) 
             {
                 candidates += 1;
-                let syntropy= BFS::getSyntropy(&candidate.identity);
+                let candidateIdentity= candidate.getIdentity();
+                let syntropy= BFS::getSyntropy(&candidateIdentity);
                 if !self.uniquePositions
                     .entry(syntropy)
                     .or_insert_with(HashSet::new)
-                    .insert(candidate.identity.clone())
+                    .insert(candidateIdentity)
                 {
                     continue;
                 }
@@ -154,7 +155,7 @@ impl BFS {
     ///
     /// # Returns
     /// A vector of `Position` instances tracing the path from the start to the specified position.
-    fn buildSolutionVector(&self, moveIndex: usize, positionIndex: usize) -> Vec<Position> {
+    fn buildSolutionVector(&self, moveIndex: usize, positionIndex: usize) -> Vec<PositionBFS> {
         let position= self.moves[moveIndex].positions[positionIndex].clone();
         if moveIndex == 0 {
             return vec![position];
