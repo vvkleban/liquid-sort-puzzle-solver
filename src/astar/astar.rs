@@ -1,7 +1,8 @@
 use std::rc::Rc;
 use std::collections::HashSet;
 use std::collections::BinaryHeap;
-use crate::position_astar::*;
+use crate::astar::position_astar::*;
+use crate::traits::position::*;
 
 pub struct Astar {
     heap: BinaryHeap<Rc<PositionAstar>>,
@@ -28,7 +29,7 @@ impl Astar {
     /// # Returns
     /// `Option<Vec<Position>>` representing the sequence of moves to solve the puzzle if a solution is found.
     /// `None` if no solution is possible.
-    pub fn solve(&mut self) -> Option<Vec<PositionAstar>> {
+    pub fn solve(&mut self) -> Option<Vec<Rc<dyn Position>>> {
         while let Some(candidate)= self.heap.pop() {
             if candidate.isSolved() {
                 return Some(Astar::buildSolutionVector(candidate));
@@ -53,11 +54,11 @@ impl Astar {
     ///
     /// # Returns
     /// A vector of `Position` instances tracing the path from the start to the specified position.
-    fn buildSolutionVector(candidate: Rc<PositionAstar>) -> Vec<PositionAstar> {
-        let mut solution=vec![ (*candidate).clone() ]; 
+    fn buildSolutionVector(candidate: Rc<PositionAstar>) -> Vec<Rc<dyn Position>> {
+        let mut solution=vec![ Rc::clone(&candidate) as Rc<dyn Position> ]; 
         let mut optionalPosition: &Option<Rc<PositionAstar>>= &candidate.previous;
         while let Some(position)= optionalPosition {
-            solution.insert(0, (*(*position)).clone());
+            solution.insert(0, (*position).clone());
             optionalPosition= &position.previous;
         }
         solution

@@ -5,6 +5,7 @@ use std::fmt::Write;
 use std::fmt;
 use std::rc::Rc;
 use crate::bottle::*;
+use crate::traits::position::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// Represents a specific arrangement or position of bottles.
@@ -46,18 +47,6 @@ impl PositionAstar {
     /// `true` if all bottles are solved, otherwise `false`.
     pub fn isSolved(&self) -> bool {
         self.bottles.iter().all(|bottle| bottle.isSolved())
-    }
-
-    pub fn getNumColors(&self) -> usize {
-        let mut char_count = HashSet::new();
-        for bottle in &self.bottles {
-            for &ch in bottle.content.iter() {
-                if ch != ' ' as u8 {
-                    char_count.insert(ch);
-                }
-            }
-        }
-        char_count.len()
     }
 
     /// Validates that all characters (colors) in the bottles appear exactly 4 times,
@@ -151,6 +140,14 @@ impl PositionAstar {
         result
     }
 
+}
+
+impl Position for PositionAstar {
+
+    fn getBottles(&self) -> &Vec<Bottle> {
+        return &self.bottles;
+    }
+
     /// Creates a string representation of the position,
     /// optionally highlighting differences from a previous position.
     ///
@@ -159,11 +156,11 @@ impl PositionAstar {
     ///
     /// # Returns
     /// `Ok(String)` containing the formatted position or an `Err(String)` if there's a length mismatch.
-    pub fn toString(&self, possiblePrevious: Option<&PositionAstar>) -> Result<String, String> {
+    fn toString(&self, possiblePrevious: &Option<Rc<dyn Position>>) -> Result<String, String> {
         let mut out= String::new();
         let length= self.bottles.len();
         if let Some(previous) = possiblePrevious {
-            if previous.bottles.len() != length {
+            if previous.getBottles().len() != length {
                 return Err("Two positions have different length!".to_string());
             }
         }
@@ -174,7 +171,7 @@ impl PositionAstar {
                 }
                 let ourBottle= &self.bottles[j];
                 // if previous exists and our bottles aren't equal, make our bottle bold
-                if let Some(_) = possiblePrevious.filter(|p| ourBottle != &p.bottles[j]) {
+                if let Some(_) = possiblePrevious.as_ref().filter(|p| ourBottle != &p.getBottles()[j]) {
                     write!(out, "❚{}❚", ourBottle.content[i] as char).unwrap();
                 } else {
                     write!(out, "|{}|", ourBottle.content[i] as char).unwrap();

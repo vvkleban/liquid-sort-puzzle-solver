@@ -1,41 +1,31 @@
 #![allow(non_snake_case)]
 mod bottle;
-mod position_bfs;
-mod position_astar;
 mod bfs;
 mod astar;
+mod traits;
 
 use std::io::{self, BufRead};
 use std::process;
+use std::rc::Rc;
+use clap::{Arg, ArgAction, Command};
 use bottle::*;
-use position_bfs::*;
-use position_astar::*;
-use bfs::*;
-use astar::*;
+use bfs::position_bfs::*;
+use astar::position_astar::*;
+use bfs::bfs::*;
+use astar::astar::*;
+use traits::position::*;
 
-fn printSolution(possibleSolution: Option<Vec<PositionAstar>>) {
+fn printSolution(possibleSolution: Option<Vec<Rc<dyn Position>>>) {
     if let Some(solution) = possibleSolution {
-        let mut oldPosition: Option<&PositionAstar>= None;
+        let mut oldPosition: Option<Rc<dyn Position>>= None;
         for i in 0..solution.len() {
-            println!("Step {}\n{}", i, solution[i].toString(oldPosition).unwrap());
-            oldPosition= Some(&solution[i]);
+            println!("Step {}\n{}", i, solution[i].toString(&oldPosition).unwrap());
+            oldPosition= Some(solution[i].clone());
         }
     } else {
         println!("No solution was found");
     }
 }
-
-/* fn printSolution(possibleSolution: Option<Vec<PositionBFS>>) {
-    if let Some(solution) = possibleSolution {
-        let mut oldPosition: Option<&PositionBFS>= None;
-        for i in 0..solution.len() {
-            println!("{}", solution[i].toString(oldPosition).unwrap());
-            oldPosition= Some(&solution[i]);
-        }
-    } else {
-        println!("No solution was found");
-    }
-} */
 
 /// Reads and processes input data from standard input to initialize and execute a BFS (Breadth-First Search)
 /// based solution finding process for a liquid sort puzzle
@@ -67,7 +57,7 @@ fn printSolution(possibleSolution: Option<Vec<PositionAstar>>) {
 ///     }
 /// }
 /// ```
-fn handleInputData() -> Result<(), ()> {
+fn handleInputData() -> Result<Vec<Bottle>, String> {
     // Prepare to read lines from standard input
     let stdin = io::stdin();
     let handle = stdin.lock();
@@ -85,8 +75,7 @@ fn handleInputData() -> Result<(), ()> {
         }
 
         if !line.is_ascii() {
-            println!("Error: All characters must be ASCII");
-            return Err(());
+            return Err("Error: All characters must be ASCII".to_string());
         }
 
         // Check if the line contains exactly four characters
@@ -94,27 +83,51 @@ fn handleInputData() -> Result<(), ()> {
             let array: [u8; 4] = line.as_bytes().to_vec().try_into().unwrap();
             data.push(Bottle::new(array));
         } else {
-            println!("Error: Each line must contain exactly four characters.");
-            return Err(());
+            return Err("Error: Each line must contain exactly four characters.".to_string());
         }
     }
-/*    let position= PositionBFS::new(data, 0);
-    if let Some(error) = position.isValid().err() {
-        println!("{}", error);
-        return Err(());
-    }
-    let mut bfs= BFS::new(position);
-    printSolution(bfs.solve()); */
-    let position= PositionAstar::new(data);
-    if let Some(error) = position.isValid().err() {
-        println!("{}", error);
-        return Err(());
-    }
-    let mut astar= Astar::new(position);
-    printSolution(astar.solve());
-    Ok(())
+    Ok(data)
 } 
 
 fn main() {
-    handleInputData().unwrap_or_else(|()| process::exit(1));
+    let matches = Command::new("Bottle Sort Puzzle Solver")
+    .version("1.0")
+    .author("Volodymyr Kleban")
+    .about("Uses an algorithm based on command line arguments to sort liquids in bottles")
+    .override_usage("liquid_sort_solver [OPTIONS] <puzzle data")
+    .arg(Arg::new("bfs")
+         .long("bfs")
+         .action(ArgAction::SetTrue)
+         .help("Use the BFS algorithm"))
+    .arg(Arg::new("astar")
+         .long("astar")
+         .action(ArgAction::SetTrue)
+         .help("Use the A* algorithm (default)"))
+    .get_matches();
+
+    match handleInputData() {
+        Ok(data) => {
+            if matches.get_flag("bfs") {
+                let position= PositionBFS::new(data, 0);
+                if let Some(error) = position.isValid().err() {
+                    eprintln!("{}", error);
+                    process::exit(1);
+                }
+                let mut bfs= BFS::new(position);
+                printSolution(bfs.solve()); 
+            } else {
+                let position= PositionAstar::new(data);
+                if let Some(error) = position.isValid().err() {
+                    eprintln!("{}", error);
+                    process::exit(1);
+                }
+                let mut astar= Astar::new(position);
+                printSolution(astar.solve());
+            }
+        },
+        Err(error) => {
+            eprintln!("{}", error);
+            process::exit(1);
+        }
+    }
 }

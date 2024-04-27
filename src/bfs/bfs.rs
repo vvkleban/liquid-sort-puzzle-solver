@@ -1,6 +1,8 @@
 use std::collections::HashSet;
 use std::collections::HashMap;
-use crate::position_bfs::*;
+use std::rc::Rc;
+use crate::bfs::position_bfs::*;
+use crate::traits::position::*;
 
 /// Represents a move in the BFS algorithm which consists of a list of positions.
 struct Move {
@@ -58,7 +60,7 @@ impl BFS {
     /// # Returns
     /// `Option<Vec<Position>>` representing the sequence of moves to solve the puzzle if a solution is found.
     /// `None` if no solution is possible.
-    pub fn solve(&mut self) -> Option<Vec<PositionBFS>> {
+    pub fn solve(&mut self) -> Option<Vec<Rc<dyn Position>>> {
         loop {
             let aMove= &self.moves[self.moves.len() - 1];
             // If we ran out of move choices, there is no solution
@@ -155,13 +157,13 @@ impl BFS {
     ///
     /// # Returns
     /// A vector of `Position` instances tracing the path from the start to the specified position.
-    fn buildSolutionVector(&self, moveIndex: usize, positionIndex: usize) -> Vec<PositionBFS> {
+    fn buildSolutionVector(&self, moveIndex: usize, positionIndex: usize) -> Vec<Rc<dyn Position>> {
         let position= self.moves[moveIndex].positions[positionIndex].clone();
         if moveIndex == 0 {
-            return vec![position];
+            return vec![Rc::new(position)];
         } 
         let mut previousMoves = self.buildSolutionVector(moveIndex - 1, position.previous);
-        previousMoves.push(position);
+        previousMoves.push(Rc::new(position));
         previousMoves
     }
 
