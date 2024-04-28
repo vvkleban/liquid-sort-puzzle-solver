@@ -21,7 +21,6 @@ Sample file contents (mind 3 empty bottles at the end):
 ```
 PSED;BPED;GUBP;OHLL;COAL;YYOA;YCUR;YORS;GNNA;CUUS;PNDA;GCEN;GHHD;BBSE;RRHL;;;
 #Green, Orange, pUrple, Red, grAy, Lightgreen, Yellow, Blue, Swamp, browN, Cyan, Pink, bEige, cHartreuse, Darkblue
-# End of file
 ```
 
 This is what the shortest possible solution of this puzzle will look like:
