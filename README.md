@@ -1,4 +1,4 @@
-A memory optimized BFS based solver for liquid sort puzzles. BFS will guarantee the solution (if any) will contain the fewest possible moves
+A memory optimized A* and BFS based solver for liquid sort puzzles. Both algorithms will guarantee the solution (if any) will contain the fewest possible moves. A* has a heuristic making it much faster and use less memory than BFS. The BFS is memory and performance optimized over classic Dijkstra's algorithm, storing moves in vectors, which are pruned along with collision hashes
 
 ```
 liquid_sort_solver --help
