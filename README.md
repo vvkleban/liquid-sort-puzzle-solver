@@ -1,193 +1,359 @@
 A memory optimized BFS based solver for liquid sort puzzles. BFS will guarantee the solution (if any) will contain the fewest possible moves
 
-Usage:
-liquid_sort_solver <input.txt
-
-Where input.txt is structiured in the following fashion:
-- Each line should exactly contain four ASCII characters representing the content of the bottle. A ' ' (space) represents an empty space, while other characters indicate liquid colors
-- There should be exactly 4 of each color (a character) in the file. Only space character is free from this limitation
-- A line starting with '#' will be ignored
-- An empty line will be ignored
-
-Sample file contents:
 ```
-# Beginning of file
-ABCB
-DEFE
-GGHA
-HFCD
+liquid_sort_solver --help
+Uses an algorithm based on command line arguments to sort liquids in bottles
 
-IGAC
-FHIE
-EAHG
-CIID
+Usage: liquid_sort_solver [OPTIONS] <puzzle data
 
-BBFD
-    
-    
+Options:
+      --bfs      Use the BFS algorithm
+      --astar    Use the A* algorithm (default)
+  -h, --help     Print help
+  -V, --version  Print version
+```
+
+Where input.txt is structured in the following fashion:
+The first line is a puzzle line, where bottles are semicolon separated. Each bottle can have up to 4 characters each representing a color. If less than 4 colors per bottle are specified, the rest are assumed to be empty spaces
+The rest of the lines will be ignored
+
+Sample file contents (mind 3 empty bottles at the end):
+```
+PSED;BPED;GUBP;OHLL;COAL;YYOA;YCUR;YORS;GNNA;CUUS;PNDA;GCEN;GHHD;BBSE;RRHL;;;
+#Green, Orange, pUrple, Red, grAy, Lightgreen, Yellow, Blue, Swamp, browN, Cyan, Pink, bEige, cHartreuse, Darkblue
 # End of file
 ```
+
 This is what the shortest possible solution of this puzzle will look like:
 ```
-|B||E||A||D|  |C||E||G||D|  |D|| || |
-|C||F||H||C|  |A||I||H||I|  |F|| || |
-|B||E||G||F|  |G||H||A||I|  |B|| || |
-|A||D||G||H|  |I||F||E||C|  |B|| || |
+liquid_sort_solver <input1100_extra_bottle.txt
+Step 0
+|D||D||P||L||L||A|  |R||S||A||S||A||N|  |D||E||L|| || || |
+|E||E||B||L||A||O|  |U||R||N||U||D||E|  |H||S||H|| || || |
+|S||P||U||H||O||Y|  |C||O||N||U||N||C|  |H||B||R|| || || |
+|P||B||G||O||C||Y|  |Y||Y||G||C||P||G|  |G||B||R|| || || |
 ------------------------------------------------
 
-|B|❚ ❚|A||D|  |C||E||G||D|  |D|❚ ❚| |
-|C|❚F❚|H||C|  |A||I||H||I|  |F|❚ ❚| |
-|B|❚E❚|G||F|  |G||H||A||I|  |B|❚ ❚| |
-|A|❚D❚|G||H|  |I||F||E||C|  |B|❚E❚| |
+Step 1
+❚ ❚|D||P||L||L||A|  |R||S||A||S||A||N|  |D||E||L|❚ ❚| || |
+❚E❚|E||B||L||A||O|  |U||R||N||U||D||E|  |H||S||H|❚ ❚| || |
+❚S❚|P||U||H||O||Y|  |C||O||N||U||N||C|  |H||B||R|❚ ❚| || |
+❚P❚|B||G||O||C||Y|  |Y||Y||G||C||P||G|  |G||B||R|❚D❚| || |
 ------------------------------------------------
 
-|B|| ||A||D|  |C|❚ ❚|G||D|  |D|❚ ❚| |
-|C||F||H||C|  |A|❚I❚|H||I|  |F|❚ ❚| |
-|B||E||G||F|  |G|❚H❚|A||I|  |B|❚E❚| |
-|A||D||G||H|  |I|❚F❚|E||C|  |B|❚E❚| |
+Step 2
+| ||D||P||L||L||A|  |R||S||A||S||A||N|  |D||E|❚ ❚| |❚ ❚| |
+|E||E||B||L||A||O|  |U||R||N||U||D||E|  |H||S|❚H❚| |❚ ❚| |
+|S||P||U||H||O||Y|  |C||O||N||U||N||C|  |H||B|❚R❚| |❚ ❚| |
+|P||B||G||O||C||Y|  |Y||Y||G||C||P||G|  |G||B|❚R❚|D|❚L❚| |
 ------------------------------------------------
 
-|B|❚ ❚|A||D|  |C|| ||G||D|  |D|| |❚ ❚
-|C|❚ ❚|H||C|  |A||I||H||I|  |F|| |❚ ❚
-|B|❚E❚|G||F|  |G||H||A||I|  |B||E|❚ ❚
-|A|❚D❚|G||H|  |I||F||E||C|  |B||E|❚F❚
+Step 3
+| ||D||P||L||L|❚ ❚  |R||S||A||S||A||N|  |D||E|| || || |❚ ❚
+|E||E||B||L||A|❚O❚  |U||R||N||U||D||E|  |H||S||H|| || |❚ ❚
+|S||P||U||H||O|❚Y❚  |C||O||N||U||N||C|  |H||B||R|| || |❚ ❚
+|P||B||G||O||C|❚Y❚  |Y||Y||G||C||P||G|  |G||B||R||D||L|❚A❚
 ------------------------------------------------
 
-|B|❚ ❚|A||D|  |C|| ||G||D|  |D|❚ ❚| |
-|C|❚ ❚|H||C|  |A||I||H||I|  |F|❚E❚| |
-|B|❚ ❚|G||F|  |G||H||A||I|  |B|❚E❚| |
-|A|❚D❚|G||H|  |I||F||E||C|  |B|❚E❚|F|
+Step 4
+| ||D||P||L|❚ ❚| |  |R||S||A||S||A||N|  |D||E|| || |❚ ❚| |
+|E||E||B||L|❚A❚|O|  |U||R||N||U||D||E|  |H||S||H|| |❚ ❚| |
+|S||P||U||H|❚O❚|Y|  |C||O||N||U||N||C|  |H||B||R|| |❚L❚| |
+|P||B||G||O|❚C❚|Y|  |Y||Y||G||C||P||G|  |G||B||R||D|❚L❚|A|
 ------------------------------------------------
 
-|B|❚ ❚|A|❚ ❚  |C|| ||G||D|  |D|| || |
-|C|❚ ❚|H|❚C❚  |A||I||H||I|  |F||E|| |
-|B|❚D❚|G|❚F❚  |G||H||A||I|  |B||E|| |
-|A|❚D❚|G|❚H❚  |I||F||E||C|  |B||E||F|
+Step 5
+| ||D||P||L|❚ ❚| |  |R||S||A||S||A||N|  |D||E|| || || |❚ ❚
+|E||E||B||L|❚ ❚|O|  |U||R||N||U||D||E|  |H||S||H|| || |❚ ❚
+|S||P||U||H|❚O❚|Y|  |C||O||N||U||N||C|  |H||B||R|| ||L|❚A❚
+|P||B||G||O|❚C❚|Y|  |Y||Y||G||C||P||G|  |G||B||R||D||L|❚A❚
 ------------------------------------------------
 
-|B|❚ ❚|A|| |  |C|| ||G|❚ ❚  |D|| || |
-|C|❚D❚|H||C|  |A||I||H|❚I❚  |F||E|| |
-|B|❚D❚|G||F|  |G||H||A|❚I❚  |B||E|| |
-|A|❚D❚|G||H|  |I||F||E|❚C❚  |B||E||F|
+Step 6
+| ||D||P|❚ ❚| || |  |R||S||A||S||A||N|  |D||E|| || |❚L❚| |
+|E||E||B|❚ ❚| ||O|  |U||R||N||U||D||E|  |H||S||H|| |❚L❚| |
+|S||P||U|❚H❚|O||Y|  |C||O||N||U||N||C|  |H||B||R|| |❚L❚|A|
+|P||B||G|❚O❚|C||Y|  |Y||Y||G||C||P||G|  |G||B||R||D|❚L❚|A|
 ------------------------------------------------
 
-|B|❚D❚|A|| |  |C|| ||G|| |  ❚ ❚| || |
-|C|❚D❚|H||C|  |A||I||H||I|  ❚F❚|E|| |
-|B|❚D❚|G||F|  |G||H||A||I|  ❚B❚|E|| |
-|A|❚D❚|G||H|  |I||F||E||C|  ❚B❚|E||F|
+Step 7
+| ||D||P|| || || |  |R||S||A||S||A||N|  ❚ ❚|E|| |❚ ❚|L|| |
+|E||E||B|| || ||O|  |U||R||N||U||D||E|  ❚H❚|S||H|❚ ❚|L|| |
+|S||P||U||H||O||Y|  |C||O||N||U||N||C|  ❚H❚|B||R|❚D❚|L||A|
+|P||B||G||O||C||Y|  |Y||Y||G||C||P||G|  ❚G❚|B||R|❚D❚|L||A|
 ------------------------------------------------
 
-|B||D||A|❚C❚  ❚ ❚| ||G|| |  | || || |
-|C||D||H|❚C❚  ❚A❚|I||H||I|  |F||E|| |
-|B||D||G|❚F❚  ❚G❚|H||A||I|  |B||E|| |
-|A||D||G|❚H❚  ❚I❚|F||E||C|  |B||E||F|
+Step 8
+| ||D||P|❚ ❚| || |  |R||S||A||S||A||N|  | ||E|❚ ❚| ||L|| |
+|E||E||B|❚H❚| ||O|  |U||R||N||U||D||E|  |H||S|❚ ❚| ||L|| |
+|S||P||U|❚H❚|O||Y|  |C||O||N||U||N||C|  |H||B|❚R❚|D||L||A|
+|P||B||G|❚O❚|C||Y|  |Y||Y||G||C||P||G|  |G||B|❚R❚|D||L||A|
 ------------------------------------------------
 
-|B||D|❚ ❚|C|  ❚A❚| ||G|| |  | || || |
-|C||D|❚H❚|C|  ❚A❚|I||H||I|  |F||E|| |
-|B||D|❚G❚|F|  ❚G❚|H||A||I|  |B||E|| |
-|A||D|❚G❚|H|  ❚I❚|F||E||C|  |B||E||F|
+Step 9
+| ||D||P|| || || |  ❚ ❚|S||A||S||A||N|  | ||E|❚ ❚| ||L|| |
+|E||E||B||H|| ||O|  ❚U❚|R||N||U||D||E|  |H||S|❚R❚| ||L|| |
+|S||P||U||H||O||Y|  ❚C❚|O||N||U||N||C|  |H||B|❚R❚|D||L||A|
+|P||B||G||O||C||Y|  ❚Y❚|Y||G||C||P||G|  |G||B|❚R❚|D||L||A|
 ------------------------------------------------
 
-|B||D|| ||C|  |A|❚ ❚|G|❚I❚  | || || |
-|C||D||H||C|  |A|❚ ❚|H|❚I❚  |F||E|| |
-|B||D||G||F|  |G|❚H❚|A|❚I❚  |B||E|| |
-|A||D||G||H|  |I|❚F❚|E|❚C❚  |B||E||F|
+Step 10
+❚E❚|D||P|| || || |  | ||S||A||S||A||N|  | |❚ ❚| || ||L|| |
+❚E❚|E||B||H|| ||O|  |U||R||N||U||D||E|  |H|❚S❚|R|| ||L|| |
+❚S❚|P||U||H||O||Y|  |C||O||N||U||N||C|  |H|❚B❚|R||D||L||A|
+❚P❚|B||G||O||C||Y|  |Y||Y||G||C||P||G|  |G|❚B❚|R||D||L||A|
 ------------------------------------------------
 
-|B||D|❚ ❚|C|  |A|❚ ❚|G||I|  | || || |
-|C||D|❚ ❚|C|  |A|❚H❚|H||I|  |F||E|| |
-|B||D|❚G❚|F|  |G|❚H❚|A||I|  |B||E|| |
-|A||D|❚G❚|H|  |I|❚F❚|E||C|  |B||E||F|
+Step 11
+|E||D||P|| || || |  | |❚ ❚|A||S||A||N|  | |❚S❚| || ||L|| |
+|E||E||B||H|| ||O|  |U|❚R❚|N||U||D||E|  |H|❚S❚|R|| ||L|| |
+|S||P||U||H||O||Y|  |C|❚O❚|N||U||N||C|  |H|❚B❚|R||D||L||A|
+|P||B||G||O||C||Y|  |Y|❚Y❚|G||C||P||G|  |G|❚B❚|R||D||L||A|
 ------------------------------------------------
 
-|B||D|❚ ❚|C|  |A|| |❚ ❚|I|  | || || |
-|C||D|❚G❚|C|  |A||H|❚H❚|I|  |F||E|| |
-|B||D|❚G❚|F|  |G||H|❚A❚|I|  |B||E|| |
-|A||D|❚G❚|H|  |I||F|❚E❚|C|  |B||E||F|
+Step 12
+|E|❚ ❚|P|| || || |  | || ||A||S||A||N|  | ||S|| |❚ ❚|L|| |
+|E|❚E❚|B||H|| ||O|  |U||R||N||U||D||E|  |H||S||R|❚D❚|L|| |
+|S|❚P❚|U||H||O||Y|  |C||O||N||U||N||C|  |H||B||R|❚D❚|L||A|
+|P|❚B❚|G||O||C||Y|  |Y||Y||G||C||P||G|  |G||B||R|❚D❚|L||A|
 ------------------------------------------------
 
-|B||D|| ||C|  |A|❚H❚❚ ❚|I|  | || || |
-|C||D||G||C|  |A|❚H❚❚ ❚|I|  |F||E|| |
-|B||D||G||F|  |G|❚H❚❚A❚|I|  |B||E|| |
-|A||D||G||H|  |I|❚F❚❚E❚|C|  |B||E||F|
+Step 13
+|E|| ||P|| || || |  | || ||A||S|❚ ❚|N|  | ||S|| || ||L|❚ ❚
+|E||E||B||H|| ||O|  |U||R||N||U|❚D❚|E|  |H||S||R||D||L|❚A❚
+|S||P||U||H||O||Y|  |C||O||N||U|❚N❚|C|  |H||B||R||D||L|❚A❚
+|P||B||G||O||C||Y|  |Y||Y||G||C|❚P❚|G|  |G||B||R||D||L|❚A❚
 ------------------------------------------------
 
-|B||D|| ||C|  ❚ ❚|H|❚A❚|I|  | || || |
-|C||D||G||C|  ❚ ❚|H|❚A❚|I|  |F||E|| |
-|B||D||G||F|  ❚G❚|H|❚A❚|I|  |B||E|| |
-|A||D||G||H|  ❚I❚|F|❚E❚|C|  |B||E||F|
+Step 14
+|E|| ||P|| || || |  | || ||A||S|❚ ❚|N|  | ||S|| |❚D❚|L|| |
+|E||E||B||H|| ||O|  |U||R||N||U|❚ ❚|E|  |H||S||R|❚D❚|L||A|
+|S||P||U||H||O||Y|  |C||O||N||U|❚N❚|C|  |H||B||R|❚D❚|L||A|
+|P||B||G||O||C||Y|  |Y||Y||G||C|❚P❚|G|  |G||B||R|❚D❚|L||A|
 ------------------------------------------------
 
-|B||D|❚G❚|C|  ❚ ❚|H||A||I|  | || || |
-|C||D|❚G❚|C|  ❚ ❚|H||A||I|  |F||E|| |
-|B||D|❚G❚|F|  ❚ ❚|H||A||I|  |B||E|| |
-|A||D|❚G❚|H|  ❚I❚|F||E||C|  |B||E||F|
+Step 15
+|E|| ||P|| || || |  | || ||A||S|❚ ❚❚ ❚  | ||S|| ||D||L|| |
+|E||E||B||H|| ||O|  |U||R||N||U|❚N❚❚E❚  |H||S||R||D||L||A|
+|S||P||U||H||O||Y|  |C||O||N||U|❚N❚❚C❚  |H||B||R||D||L||A|
+|P||B||G||O||C||Y|  |Y||Y||G||C|❚P❚❚G❚  |G||B||R||D||L||A|
 ------------------------------------------------
 
-|B||D||G||C|  ❚I❚|H||A|❚ ❚  | || || |
-|C||D||G||C|  ❚I❚|H||A|❚ ❚  |F||E|| |
-|B||D||G||F|  ❚I❚|H||A|❚ ❚  |B||E|| |
-|A||D||G||H|  ❚I❚|F||E|❚C❚  |B||E||F|
+Step 16
+|E|❚ ❚|P|| || || |  | || ||A||S|| |❚E❚  | ||S|| ||D||L|| |
+|E|❚ ❚|B||H|| ||O|  |U||R||N||U||N|❚E❚  |H||S||R||D||L||A|
+|S|❚P❚|U||H||O||Y|  |C||O||N||U||N|❚C❚  |H||B||R||D||L||A|
+|P|❚B❚|G||O||C||Y|  |Y||Y||G||C||P|❚G❚  |G||B||R||D||L||A|
 ------------------------------------------------
 
-|B||D||G|❚ ❚  |I||H||A|❚ ❚  | || || |
-|C||D||G|❚ ❚  |I||H||A|❚C❚  |F||E|| |
-|B||D||G|❚F❚  |I||H||A|❚C❚  |B||E|| |
-|A||D||G|❚H❚  |I||F||E|❚C❚  |B||E||F|
+Step 17
+|E|| ||P|| || || |  | |❚ ❚|A||S|| ||E|  | ||S|❚R❚|D||L|| |
+|E|| ||B||H|| ||O|  |U|❚ ❚|N||U||N||E|  |H||S|❚R❚|D||L||A|
+|S||P||U||H||O||Y|  |C|❚O❚|N||U||N||C|  |H||B|❚R❚|D||L||A|
+|P||B||G||O||C||Y|  |Y|❚Y❚|G||C||P||G|  |G||B|❚R❚|D||L||A|
 ------------------------------------------------
 
-|B||D||G|❚ ❚  |I||H||A|| |  ❚ ❚| || |
-|C||D||G|❚F❚  |I||H||A||C|  ❚ ❚|E|| |
-|B||D||G|❚F❚  |I||H||A||C|  ❚B❚|E|| |
-|A||D||G|❚H❚  |I||F||E||C|  ❚B❚|E||F|
+Step 18
+|E|❚ ❚❚ ❚| || || |  | || ||A||S|| ||E|  | ||S||R||D||L|| |
+|E|❚P❚❚B❚|H|| ||O|  |U|| ||N||U||N||E|  |H||S||R||D||L||A|
+|S|❚P❚❚U❚|H||O||Y|  |C||O||N||U||N||C|  |H||B||R||D||L||A|
+|P|❚B❚❚G❚|O||C||Y|  |Y||Y||G||C||P||G|  |G||B||R||D||L||A|
 ------------------------------------------------
 
-❚ ❚|D||G|| |  |I||H||A|| |  ❚ ❚| || |
-❚C❚|D||G||F|  |I||H||A||C|  ❚B❚|E|| |
-❚B❚|D||G||F|  |I||H||A||C|  ❚B❚|E|| |
-❚A❚|D||G||H|  |I||F||E||C|  ❚B❚|E||F|
+Step 19
+|E|| || || || |❚ ❚  | |❚ ❚|A||S|| ||E|  | ||S||R||D||L|| |
+|E||P||B||H|| |❚ ❚  |U|❚O❚|N||U||N||E|  |H||S||R||D||L||A|
+|S||P||U||H||O|❚Y❚  |C|❚O❚|N||U||N||C|  |H||B||R||D||L||A|
+|P||B||G||O||C|❚Y❚  |Y|❚Y❚|G||C||P||G|  |G||B||R||D||L||A|
 ------------------------------------------------
 
-❚ ❚|D||G|| |  |I||H||A|❚C❚  | || || |
-❚ ❚|D||G||F|  |I||H||A|❚C❚  |B||E|| |
-❚B❚|D||G||F|  |I||H||A|❚C❚  |B||E|| |
-❚A❚|D||G||H|  |I||F||E|❚C❚  |B||E||F|
+Step 20
+|E|| || || |❚O❚| |  | |❚ ❚|A||S|| ||E|  | ||S||R||D||L|| |
+|E||P||B||H|❚O❚| |  |U|❚ ❚|N||U||N||E|  |H||S||R||D||L||A|
+|S||P||U||H|❚O❚|Y|  |C|❚ ❚|N||U||N||C|  |H||B||R||D||L||A|
+|P||B||G||O|❚C❚|Y|  |Y|❚Y❚|G||C||P||G|  |G||B||R||D||L||A|
 ------------------------------------------------
 
-❚ ❚|D||G|| |  |I||H||A||C|  ❚B❚| || |
-❚ ❚|D||G||F|  |I||H||A||C|  ❚B❚|E|| |
-❚ ❚|D||G||F|  |I||H||A||C|  ❚B❚|E|| |
-❚A❚|D||G||H|  |I||F||E||C|  ❚B❚|E||F|
+Step 21
+|E|| || || ||O|❚ ❚  | |❚ ❚|A||S|| ||E|  | ||S||R||D||L|| |
+|E||P||B||H||O|❚Y❚  |U|❚ ❚|N||U||N||E|  |H||S||R||D||L||A|
+|S||P||U||H||O|❚Y❚  |C|❚ ❚|N||U||N||C|  |H||B||R||D||L||A|
+|P||B||G||O||C|❚Y❚  |Y|❚ ❚|G||C||P||G|  |G||B||R||D||L||A|
 ------------------------------------------------
 
-❚A❚|D||G|| |  |I||H|❚ ❚|C|  |B|| || |
-❚A❚|D||G||F|  |I||H|❚ ❚|C|  |B||E|| |
-❚A❚|D||G||F|  |I||H|❚ ❚|C|  |B||E|| |
-❚A❚|D||G||H|  |I||F|❚E❚|C|  |B||E||F|
+Step 22
+|E|| || || ||O|| |  | |❚ ❚|A||S|❚ ❚|E|  | ||S||R||D||L|| |
+|E||P||B||H||O||Y|  |U|❚ ❚|N||U|❚ ❚|E|  |H||S||R||D||L||A|
+|S||P||U||H||O||Y|  |C|❚N❚|N||U|❚ ❚|C|  |H||B||R||D||L||A|
+|P||B||G||O||C||Y|  |Y|❚N❚|G||C|❚P❚|G|  |G||B||R||D||L||A|
 ------------------------------------------------
 
-|A||D||G|| |  |I||H|❚E❚|C|  |B|❚ ❚| |
-|A||D||G||F|  |I||H|❚E❚|C|  |B|❚ ❚| |
-|A||D||G||F|  |I||H|❚E❚|C|  |B|❚ ❚| |
-|A||D||G||H|  |I||F|❚E❚|C|  |B|❚ ❚|F|
+Step 23
+|E|❚ ❚| || ||O|| |  | || ||A||S|❚ ❚|E|  | ||S||R||D||L|| |
+|E|❚ ❚|B||H||O||Y|  |U|| ||N||U|❚P❚|E|  |H||S||R||D||L||A|
+|S|❚ ❚|U||H||O||Y|  |C||N||N||U|❚P❚|C|  |H||B||R||D||L||A|
+|P|❚B❚|G||O||C||Y|  |Y||N||G||C|❚P❚|G|  |G||B||R||D||L||A|
 ------------------------------------------------
 
-|A||D||G|❚ ❚  |I||H||E||C|  |B|| |❚ ❚
-|A||D||G|❚ ❚  |I||H||E||C|  |B|| |❚F❚
-|A||D||G|❚ ❚  |I||H||E||C|  |B|| |❚F❚
-|A||D||G|❚H❚  |I||F||E||C|  |B|| |❚F❚
+Step 24
+|E|| || || ||O|| |  | || |❚ ❚|S|| ||E|  | ||S||R||D||L|❚A❚
+|E|| ||B||H||O||Y|  |U|| |❚N❚|U||P||E|  |H||S||R||D||L|❚A❚
+|S|| ||U||H||O||Y|  |C||N|❚N❚|U||P||C|  |H||B||R||D||L|❚A❚
+|P||B||G||O||C||Y|  |Y||N|❚G❚|C||P||G|  |G||B||R||D||L|❚A❚
 ------------------------------------------------
 
-|A||D||G|❚H❚  |I|❚ ❚|E||C|  |B|| || |
-|A||D||G|❚H❚  |I|❚ ❚|E||C|  |B|| ||F|
-|A||D||G|❚H❚  |I|❚ ❚|E||C|  |B|| ||F|
-|A||D||G|❚H❚  |I|❚F❚|E||C|  |B|| ||F|
+Step 25
+|E|❚ ❚❚B❚| ||O|| |  | || || ||S|| ||E|  | ||S||R||D||L||A|
+|E|❚ ❚❚B❚|H||O||Y|  |U|| ||N||U||P||E|  |H||S||R||D||L||A|
+|S|❚ ❚❚U❚|H||O||Y|  |C||N||N||U||P||C|  |H||B||R||D||L||A|
+|P|❚ ❚❚G❚|O||C||Y|  |Y||N||G||C||P||G|  |G||B||R||D||L||A|
 ------------------------------------------------
 
-|A||D||G||H|  |I|❚F❚|E||C|  |B|| |❚ ❚
-|A||D||G||H|  |I|❚F❚|E||C|  |B|| |❚ ❚
-|A||D||G||H|  |I|❚F❚|E||C|  |B|| |❚ ❚
-|A||D||G||H|  |I|❚F❚|E||C|  |B|| |❚ ❚
+Step 26
+❚ ❚❚ ❚|B|| ||O|| |  | || || ||S|| ||E|  | ||S||R||D||L||A|
+❚ ❚❚ ❚|B||H||O||Y|  |U|| ||N||U||P||E|  |H||S||R||D||L||A|
+❚S❚❚E❚|U||H||O||Y|  |C||N||N||U||P||C|  |H||B||R||D||L||A|
+❚P❚❚E❚|G||O||C||Y|  |Y||N||G||C||P||G|  |G||B||R||D||L||A|
 ------------------------------------------------
+
+Step 27
+| |❚E❚|B|| ||O|| |  | || || ||S|| |❚ ❚  | ||S||R||D||L||A|
+| |❚E❚|B||H||O||Y|  |U|| ||N||U||P|❚ ❚  |H||S||R||D||L||A|
+|S|❚E❚|U||H||O||Y|  |C||N||N||U||P|❚C❚  |H||B||R||D||L||A|
+|P|❚E❚|G||O||C||Y|  |Y||N||G||C||P|❚G❚  |G||B||R||D||L||A|
+------------------------------------------------
+
+Step 28
+| ||E||B|| ||O|| |  | |❚N❚❚ ❚|S|| || |  | ||S||R||D||L||A|
+| ||E||B||H||O||Y|  |U|❚N❚❚ ❚|U||P|| |  |H||S||R||D||L||A|
+|S||E||U||H||O||Y|  |C|❚N❚❚ ❚|U||P||C|  |H||B||R||D||L||A|
+|P||E||G||O||C||Y|  |Y|❚N❚❚G❚|C||P||G|  |G||B||R||D||L||A|
+------------------------------------------------
+
+Step 29
+❚S❚|E||B|| ||O|| |  | ||N|| ||S|| || |  | |❚ ❚|R||D||L||A|
+❚S❚|E||B||H||O||Y|  |U||N|| ||U||P|| |  |H|❚ ❚|R||D||L||A|
+❚S❚|E||U||H||O||Y|  |C||N|| ||U||P||C|  |H|❚B❚|R||D||L||A|
+❚P❚|E||G||O||C||Y|  |Y||N||G||C||P||G|  |G|❚B❚|R||D||L||A|
+------------------------------------------------
+
+Step 30
+|S||E|❚ ❚| ||O|| |  | ||N|| ||S|| || |  | |❚B❚|R||D||L||A|
+|S||E|❚ ❚|H||O||Y|  |U||N|| ||U||P|| |  |H|❚B❚|R||D||L||A|
+|S||E|❚U❚|H||O||Y|  |C||N|| ||U||P||C|  |H|❚B❚|R||D||L||A|
+|P||E|❚G❚|O||C||Y|  |Y||N||G||C||P||G|  |G|❚B❚|R||D||L||A|
+------------------------------------------------
+
+Step 31
+|S||E|❚ ❚| ||O|| |  ❚ ❚|N|| ||S|| || |  | ||B||R||D||L||A|
+|S||E|❚U❚|H||O||Y|  ❚ ❚|N|| ||U||P|| |  |H||B||R||D||L||A|
+|S||E|❚U❚|H||O||Y|  ❚C❚|N|| ||U||P||C|  |H||B||R||D||L||A|
+|P||E|❚G❚|O||C||Y|  ❚Y❚|N||G||C||P||G|  |G||B||R||D||L||A|
+------------------------------------------------
+
+Step 32
+|S||E|| || ||O|| |  ❚ ❚|N|| ||S|| |❚ ❚  | ||B||R||D||L||A|
+|S||E||U||H||O||Y|  ❚C❚|N|| ||U||P|❚ ❚  |H||B||R||D||L||A|
+|S||E||U||H||O||Y|  ❚C❚|N|| ||U||P|❚ ❚  |H||B||R||D||L||A|
+|P||E||G||O||C||Y|  ❚Y❚|N||G||C||P|❚G❚  |G||B||R||D||L||A|
+------------------------------------------------
+
+Step 33
+|S||E|| || ||O|| |  | ||N|❚ ❚|S|| |❚ ❚  | ||B||R||D||L||A|
+|S||E||U||H||O||Y|  |C||N|❚ ❚|U||P|❚ ❚  |H||B||R||D||L||A|
+|S||E||U||H||O||Y|  |C||N|❚G❚|U||P|❚ ❚  |H||B||R||D||L||A|
+|P||E||G||O||C||Y|  |Y||N|❚G❚|C||P|❚ ❚  |G||B||R||D||L||A|
+------------------------------------------------
+
+Step 34
+|S||E|| || ||O|| |  | ||N|| ||S|| |❚ ❚  ❚ ❚|B||R||D||L||A|
+|S||E||U||H||O||Y|  |C||N|| ||U||P|❚ ❚  ❚ ❚|B||R||D||L||A|
+|S||E||U||H||O||Y|  |C||N||G||U||P|❚H❚  ❚ ❚|B||R||D||L||A|
+|P||E||G||O||C||Y|  |Y||N||G||C||P|❚H❚  ❚G❚|B||R||D||L||A|
+------------------------------------------------
+
+Step 35
+|S||E|| || ||O|| |  | ||N|❚ ❚|S|| || |  ❚ ❚|B||R||D||L||A|
+|S||E||U||H||O||Y|  |C||N|❚G❚|U||P|| |  ❚ ❚|B||R||D||L||A|
+|S||E||U||H||O||Y|  |C||N|❚G❚|U||P||H|  ❚ ❚|B||R||D||L||A|
+|P||E||G||O||C||Y|  |Y||N|❚G❚|C||P||H|  ❚ ❚|B||R||D||L||A|
+------------------------------------------------
+
+Step 36
+|S||E|| || ||O|| |  | ||N|| |❚ ❚| || |  ❚ ❚|B||R||D||L||A|
+|S||E||U||H||O||Y|  |C||N||G|❚U❚|P|| |  ❚ ❚|B||R||D||L||A|
+|S||E||U||H||O||Y|  |C||N||G|❚U❚|P||H|  ❚ ❚|B||R||D||L||A|
+|P||E||G||O||C||Y|  |Y||N||G|❚C❚|P||H|  ❚S❚|B||R||D||L||A|
+------------------------------------------------
+
+Step 37
+|S||E|| |❚ ❚|O|| |  | ||N|| || || |❚H❚  | ||B||R||D||L||A|
+|S||E||U|❚ ❚|O||Y|  |C||N||G||U||P|❚H❚  | ||B||R||D||L||A|
+|S||E||U|❚ ❚|O||Y|  |C||N||G||U||P|❚H❚  | ||B||R||D||L||A|
+|P||E||G|❚O❚|C||Y|  |Y||N||G||C||P|❚H❚  |S||B||R||D||L||A|
+------------------------------------------------
+
+Step 38
+❚ ❚|E|| || ||O|| |  | ||N|| || || ||H|  ❚S❚|B||R||D||L||A|
+❚ ❚|E||U|| ||O||Y|  |C||N||G||U||P||H|  ❚S❚|B||R||D||L||A|
+❚ ❚|E||U|| ||O||Y|  |C||N||G||U||P||H|  ❚S❚|B||R||D||L||A|
+❚P❚|E||G||O||C||Y|  |Y||N||G||C||P||H|  ❚S❚|B||R||D||L||A|
+------------------------------------------------
+
+Step 39
+❚P❚|E|| || ||O|| |  | ||N|| || |❚ ❚|H|  |S||B||R||D||L||A|
+❚P❚|E||U|| ||O||Y|  |C||N||G||U|❚ ❚|H|  |S||B||R||D||L||A|
+❚P❚|E||U|| ||O||Y|  |C||N||G||U|❚ ❚|H|  |S||B||R||D||L||A|
+❚P❚|E||G||O||C||Y|  |Y||N||G||C|❚ ❚|H|  |S||B||R||D||L||A|
+------------------------------------------------
+
+Step 40
+|P||E|| || ||O|| |  | ||N|| |❚ ❚❚ ❚|H|  |S||B||R||D||L||A|
+|P||E||U|| ||O||Y|  |C||N||G|❚ ❚❚ ❚|H|  |S||B||R||D||L||A|
+|P||E||U|| ||O||Y|  |C||N||G|❚ ❚❚U❚|H|  |S||B||R||D||L||A|
+|P||E||G||O||C||Y|  |Y||N||G|❚C❚❚U❚|H|  |S||B||R||D||L||A|
+------------------------------------------------
+
+Step 41
+|P||E|| |❚O❚❚ ❚| |  | ||N|| || || ||H|  |S||B||R||D||L||A|
+|P||E||U|❚O❚❚ ❚|Y|  |C||N||G|| || ||H|  |S||B||R||D||L||A|
+|P||E||U|❚O❚❚ ❚|Y|  |C||N||G|| ||U||H|  |S||B||R||D||L||A|
+|P||E||G|❚O❚❚C❚|Y|  |Y||N||G||C||U||H|  |S||B||R||D||L||A|
+------------------------------------------------
+
+Step 42
+|P||E|| ||O|❚ ❚| |  ❚C❚|N|| || || ||H|  |S||B||R||D||L||A|
+|P||E||U||O|❚ ❚|Y|  ❚C❚|N||G|| || ||H|  |S||B||R||D||L||A|
+|P||E||U||O|❚ ❚|Y|  ❚C❚|N||G|| ||U||H|  |S||B||R||D||L||A|
+|P||E||G||O|❚ ❚|Y|  ❚Y❚|N||G||C||U||H|  |S||B||R||D||L||A|
+------------------------------------------------
+
+Step 43
+|P||E|| ||O|| || |  ❚ ❚|N|| |❚C❚| ||H|  |S||B||R||D||L||A|
+|P||E||U||O|| ||Y|  ❚ ❚|N||G|❚C❚| ||H|  |S||B||R||D||L||A|
+|P||E||U||O|| ||Y|  ❚ ❚|N||G|❚C❚|U||H|  |S||B||R||D||L||A|
+|P||E||G||O|| ||Y|  ❚Y❚|N||G|❚C❚|U||H|  |S||B||R||D||L||A|
+------------------------------------------------
+
+Step 44
+|P||E|| ||O|| |❚Y❚  ❚ ❚|N|| ||C|| ||H|  |S||B||R||D||L||A|
+|P||E||U||O|| |❚Y❚  ❚ ❚|N||G||C|| ||H|  |S||B||R||D||L||A|
+|P||E||U||O|| |❚Y❚  ❚ ❚|N||G||C||U||H|  |S||B||R||D||L||A|
+|P||E||G||O|| |❚Y❚  ❚ ❚|N||G||C||U||H|  |S||B||R||D||L||A|
+------------------------------------------------
+
+Step 45
+|P||E|❚ ❚|O|| ||Y|  | ||N|| ||C|❚U❚|H|  |S||B||R||D||L||A|
+|P||E|❚ ❚|O|| ||Y|  | ||N||G||C|❚U❚|H|  |S||B||R||D||L||A|
+|P||E|❚ ❚|O|| ||Y|  | ||N||G||C|❚U❚|H|  |S||B||R||D||L||A|
+|P||E|❚G❚|O|| ||Y|  | ||N||G||C|❚U❚|H|  |S||B||R||D||L||A|
+------------------------------------------------
+
+Step 46
+|P||E|❚G❚|O|| ||Y|  | ||N|❚ ❚|C||U||H|  |S||B||R||D||L||A|
+|P||E|❚G❚|O|| ||Y|  | ||N|❚ ❚|C||U||H|  |S||B||R||D||L||A|
+|P||E|❚G❚|O|| ||Y|  | ||N|❚ ❚|C||U||H|  |S||B||R||D||L||A|
+|P||E|❚G❚|O|| ||Y|  | ||N|❚ ❚|C||U||H|  |S||B||R||D||L||A|
+------------------------------------------------
+
 ```

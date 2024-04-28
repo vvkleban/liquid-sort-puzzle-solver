@@ -4,7 +4,7 @@ mod bfs;
 mod astar;
 mod traits;
 
-use std::io::{self, BufRead};
+use std::io;
 use std::process;
 use std::rc::Rc;
 use clap::{Arg, ArgAction, Command};
@@ -58,32 +58,23 @@ fn printSolution(possibleSolution: Option<Vec<Rc<dyn Position>>>) {
 /// }
 /// ```
 fn handleInputData() -> Result<Vec<Bottle>, String> {
-    // Prepare to read lines from standard input
-    let stdin = io::stdin();
-    let handle = stdin.lock();
-
-    // This vector will hold all the vectors of chars
-    let mut data: Vec<Bottle> = Vec::new();
-
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).expect("Failed to read line");
+    input.pop();
+    let mut data: Vec<Bottle>= Vec::new();
     // Read each line from standard input
-    for line in handle.lines() {
-        let line = line.expect("Failed to read line");
-        
-        // Skip empty or whitespace-only lines
-        if line.is_empty() || line.starts_with('#') {
-            continue;
-        }
-
+    for line in input.split(';')
+    {
         if !line.is_ascii() {
             return Err("Error: All characters must be ASCII".to_string());
         }
-
+        let paddedLine= format!("{:width$}", line, width = 4.max(line.len()));
         // Check if the line contains exactly four characters
-        if line.len() == 4 {
-            let array: [u8; 4] = line.as_bytes().to_vec().try_into().unwrap();
+        if paddedLine.len() == 4 {
+            let array: [u8; 4] = paddedLine.as_bytes().to_vec().try_into().unwrap();
             data.push(Bottle::new(array));
         } else {
-            return Err("Error: Each line must contain exactly four characters.".to_string());
+            return Err("Error: Each line must contain at least four characters.".to_string());
         }
     }
     Ok(data)
