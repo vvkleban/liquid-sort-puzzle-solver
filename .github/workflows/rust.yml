@@ -21,7 +21,7 @@ jobs:
         override: true
 
     - name: Build
-      run: cargo build --release
+      run: cargo build
 
     - name: Run tests
       run: cargo test
@@ -36,6 +36,9 @@ jobs:
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
+
+    - name: Build
+      run: cargo build --release
 
     - name: Create Release
       id: create_release
