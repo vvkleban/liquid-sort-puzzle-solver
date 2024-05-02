@@ -1,22 +1,65 @@
-name: Rust
+name: Rust Build and Release
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-
-env:
-  CARGO_TERM_COLOR: always
+    branches:
+      - main
+    tags:
+      - 'v*'
 
 jobs:
   build:
-
+    name: Build and Test
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
+    - name: Set up Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+
     - name: Build
-      run: cargo build --verbose
+      run: cargo build --release
+
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test
+
+  release:
+    name: Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+
+    - name: Download artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: liquid_sort_solver
+        path: target/release
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./target/release/liquid_sort_solver
+        asset_name: liquid_sort_solver
+        asset_content_type: application/octet-stream
