@@ -52,6 +52,7 @@ jobs:
 
     - name: Set Executable Path
       id: exec_path
+      shell: bash
       run: |
         if [ "${{ runner.os }}" == "Windows" ]; then
           echo "::set-output name=path::target/release/liquid_sort_solver.exe"
@@ -72,6 +73,7 @@ jobs:
 
     - name: Set Asset Name
       id: asset_name
+      shell: bash
       run: |
         if [ "${{ runner.os }}" == "Windows" ]; then
           echo "::set-output name=name::Windows-liquid_sort_solver.exe"
