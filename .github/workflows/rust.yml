@@ -29,13 +29,30 @@ jobs:
     - name: Run tests
       run: cargo test
 
-  release:
+  create-release:
+    name: Create GitHub Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: Release ${{ github.ref_name }}
+        draft: false
+        prerelease: false
+
+  release-assets:
     name: Release on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
-    needs: build
+    needs: create-release
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
@@ -59,17 +76,6 @@ jobs:
         else
           echo "::set-output name=path::target/release/liquid_sort_solver"
         fi
-        
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref_name }}
-        release_name: Release ${{ github.ref_name }}
-        draft: false
-        prerelease: false
 
     - name: Set Asset Name
       id: asset_name
