@@ -37,12 +37,6 @@ jobs:
       with:
         toolchain: stable
 
-    - name: Download artifact
-      uses: actions/download-artifact@v3
-      with:
-        name: liquid_sort_solver
-        path: target/release
-
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
