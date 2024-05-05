@@ -88,9 +88,9 @@ jobs:
       shell: bash
       run: |
         if [ "${{ runner.os }}" == "Windows" ]; then
-          echo "::set-output name=name::Windows-liquid_sort_solver.exe"
+          echo "::set-output name=name::Windows/liquid_sort_solver.exe"
         else
-          echo "::set-output name=name::${{ runner.os }}-liquid_sort_solver"
+          echo "::set-output name=name::${{ runner.os }}/liquid_sort_solver"
         fi
 
     - name: Upload Release Asset
