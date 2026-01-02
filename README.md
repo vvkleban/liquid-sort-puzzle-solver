@@ -14,8 +14,8 @@ Options:
 ```
 
 Where input.txt is structured in the following fashion:
-The first line is a puzzle line, where bottles are semicolon separated. Each bottle can have up to 4 characters each representing a color. If less than 4 colors per bottle are specified, the rest are assumed to be empty spaces
-The rest of the lines will be ignored
+Each non-comment line is a puzzle row, where bottles are semicolon or newline separated. Each bottle can have up to 4 characters each representing a color. If less than 4 colors per bottle are specified, the rest are assumed to be empty spaces
+Newline characters between the bottles shape the output rows for each step. Lines starting with `#` are ignored
 
 Sample file contents (mind 3 empty bottles at the end):
 ```
